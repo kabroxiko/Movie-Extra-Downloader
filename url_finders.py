@@ -1,7 +1,7 @@
 from googlesearch import search as google_web_search
 from time import sleep
 from time import time
-import sys
+import os, sys, logging
 
 from urllib.error import HTTPError
 
@@ -11,6 +11,8 @@ from urllib.parse import quote
 
 last = None
 
+
+log = logging.getLogger("med")
 
 def google_search(query, limit):
     global last
@@ -34,22 +36,22 @@ def google_search(query, limit):
             raise
 
         except HTTPError as e:
-            print('google search service unavailable.')
+            log.error('google search service unavailable.')
 
             if tries > 3:
-                print('Failed to download google search result. Reason: ' + str(e))
+                log.error('Failed to download google search result. Reason: ' + str(e))
                 raise
 
-            print('Failed to download google search result, retrying. Reason: ' + str(e))
+            log.error('Failed to download google search result, retrying. Reason: ' + str(e))
             sleep(1)
 
         except:
             e = sys.exc_info()[0]
             if tries > 3:
-                print('Failed to download google search result. Reason: ' + str(e))
+                log.error('Failed to download google search result. Reason: ' + str(e))
                 raise
 
-            print('Failed to download google search result, retrying. Reason: ' + str(e))
+            log.error('Failed to download google search result, retrying. Reason: ' + str(e))
             sleep(1)
         else:
             break
@@ -73,10 +75,10 @@ def youtube_search(query, limit):
         except:
             e = sys.exc_info()[0]
             if tries > 3:
-                print('Failed to download google search result. Reason: ' + str(e))
+                log.error('Failed to download google search result. Reason: ' + str(e))
                 raise
 
-            print('Failed to download google search result, retrying. Reason: ' + str(e))
+            log.error('Failed to download google search result, retrying. Reason: ' + str(e))
             sleep(1)
 
         else:

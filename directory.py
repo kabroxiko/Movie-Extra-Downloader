@@ -1,8 +1,10 @@
-import os
+import os, sys, logging
 import tools as tools
 from datetime import date
 import json
 
+
+log = logging.getLogger("med")
 
 class Directory(object):
 
@@ -144,7 +146,7 @@ class Directory(object):
                             movie_backup_data = result
 
                 if movie_data is None and movie_backup_data is not None:
-                    print('None of the search results had a correct release year, picking the next best result')
+                    log.info('None of the search results had a correct release year, picking the next best result')
                     movie_data = movie_backup_data
 
                 if movie_data is None:

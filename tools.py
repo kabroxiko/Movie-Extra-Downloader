@@ -5,8 +5,10 @@ from urllib.parse import quote
 import time
 import json
 import hashlib
-import os
+import os, sys, logging
 
+
+log = logging.getLogger("med")
 
 def hash_file(file_path):
     if not os.path.isdir(file_path):
@@ -138,7 +140,7 @@ def space_cleanup(string):
 def retrieve_web_page(url, page_name='page'):
 
     response = None
-    print('Downloading ' + page_name + '.')
+    log.info('Downloading ' + page_name + '.')
 
     for tries in range(1, 10):
         try:
@@ -146,28 +148,28 @@ def retrieve_web_page(url, page_name='page'):
             break
 
         except UnicodeEncodeError as e:
-            print('Failed to download ' + page_name + ' : ' + str(e) + '. Skipping.')
+            log.error('Failed to download ' + page_name + ' : ' + str(e) + '. Skipping.')
             break
 
         except timeout:
             if tries > 5:
-                print('You might have lost internet connection.')
+                log.error('You might have lost internet connection.')
                 break
 
             time.sleep(1)
-            print('Failed to download ' + page_name + ' : timed out. Retrying.')
+            log.error('Failed to download ' + page_name + ' : timed out. Retrying.')
 
         except HTTPError as e:
-            print('Failed to download ' + page_name + ' : ' + str(e) + '. Skipping.')
+            log.error('Failed to download ' + page_name + ' : ' + str(e) + '. Skipping.')
             break
 
         except URLError:
             if tries > 3:
-                print('You might have lost internet connection.')
+                log.error('You might have lost internet connection.')
                 raise
 
             time.sleep(1)
-            print('Failed to download ' + page_name + '. Retrying.')
+            log.error('Failed to download ' + page_name + '. Retrying.')
 
     return response
 
