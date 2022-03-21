@@ -1,4 +1,4 @@
-import os
+import os, sys, logging
 from youtube_dl import DownloadError
 import tools as tools
 import youtube_dl
@@ -8,6 +8,7 @@ from datetime import date
 import time
 import shutil
 
+log = logging.getLogger("med")
 
 class ExtraFinder:
 
@@ -32,7 +33,7 @@ class ExtraFinder:
 
                     try:
 
-                        with youtube_dl.YoutubeDL({'socket_timeout': '3'}) as ydl:
+                        with youtube_dl.YoutubeDL({'socket_timeout': '3', 'logger': log}) as ydl:
                             return ydl.extract_info(url, download=False)
 
                     except DownloadError as e:
@@ -40,10 +41,10 @@ class ExtraFinder:
                         if 'ERROR: Unable to download webpage:' in e.args[0]:
 
                             if tries > 3:
-                                print('hey, there: error!!!')
+                                log.error('hey, there: error!!!')
                                 raise
 
-                            print('failed to get video data, retrying')
+                            log.error('failed to get video data, retrying')
                             time.sleep(1)
                         else:
                             return None
@@ -90,10 +91,10 @@ class ExtraFinder:
                     youtube_video['views_per_day'] = (youtube_video['view_count'] /
                                                       (365 + time_delta.total_seconds() / 60 / 60 / 24))
                 else:
-                    print('no "upload_date"!!!')
+                    log.error('no "upload_date"!!!')
                     youtube_video['views_per_day'] = 0
             else:
-                print('no "upload_date"!!!')
+                log.error('no "upload_date"!!!')
                 youtube_video['views_per_day'] = 0
             return youtube_video
 
@@ -113,8 +114,8 @@ class ExtraFinder:
                 urls = url_finders.youtube_channel_search(query, limit)
 
             else:
-                print("The search engine \"" + search['source'] + "\" wasn't recognized. Skipping.")
-                print('Please use "google_search", "youtube_search" or "youtube_channel_search" as the source.')
+                log.error("The search engine \"" + search['source'] + "\" wasn't recognized. Skipping.")
+                log.error('Please use "google_search", "youtube_search" or "youtube_channel_search" as the source.')
                 continue
 
             if urls:
@@ -227,7 +228,7 @@ class ExtraFinder:
             if append_video:
                 filtered_candidates.append(youtube_video)
             else:
-                print(info[:-2] + '.')
+                log.info(info[:-2] + '.')
 
         self.youtube_videos = filtered_candidates
 
@@ -296,7 +297,7 @@ class ExtraFinder:
             if append_video:
                 filtered_candidates.append(youtube_video)
             else:
-                print(info[:-2] + '.')
+                log.info(info[:-2] + '.')
 
         self.play_trailers = filtered_candidates
 
@@ -440,6 +441,7 @@ class ExtraFinder:
         downloaded_videos_meta = list()
 
         arguments = self.config.youtube_dl_arguments
+        arguments['logger'] = log
         arguments['outtmpl'] = os.path.join(tmp_file, arguments['outtmpl'])
         for key, value in arguments.items():
             if isinstance(value, str):
@@ -466,9 +468,9 @@ class ExtraFinder:
                     if tries > 3:
                         if str(e).startswith('ERROR: Did not get any data blocks'):
                             return
-                        print('failed to download the video.')
+                        log.error('failed to download the video.')
                         break
-                    print('failed to download the video. retrying')
+                    log.error('failed to download the video. retrying')
                     time.sleep(3)
 
             if count >= self.config.videos_to_download:

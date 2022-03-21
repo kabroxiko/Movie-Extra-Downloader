@@ -1,24 +1,25 @@
-import os
+import os, sys, logging
 
 from extra_finder import ExtraFinder
 
+log = logging.getLogger("med")
 
 def download_extra(directory, config, tmp_folder):
     def process_trailers_config(tmp_folder):
 
         finder = ExtraFinder(directory, config)
-        print('processing: ' + directory.name)
+        log.info('processing: ' + directory.name)
         finder.search()
         finder.filter_search_result()
 
         for youtube_video in finder.youtube_videos:
-            print('--------------------------------------------------------------------------------------')
-            print(youtube_video['webpage_url'])
-            print(str(youtube_video['adjusted_rating']))
-            print(youtube_video['format'])
-            print(str(youtube_video['views_per_day']))
-        print('--------------------------------------------------------------------------------------')
-        print(directory.name)
+            log.info('--------------------------------------------------------------------------------------')
+            log.info(youtube_video['webpage_url'])
+            log.info(str(youtube_video['adjusted_rating']))
+            log.info(youtube_video['format'])
+            log.info(str(youtube_video['views_per_day']))
+        log.info('--------------------------------------------------------------------------------------')
+        log.info(directory.name)
 
         finder.apply_custom_filters()
         finder.order_results()
@@ -29,7 +30,7 @@ def download_extra(directory, config, tmp_folder):
                         finder.play_trailers[0]['duration'] <= \
                         finder.youtube_videos[0]['duration'] + 5:
                     finder.youtube_videos = [finder.play_trailers[0]] + finder.youtube_videos
-                    print('picked play trailer.')
+                    log.info('picked play trailer.')
             # if len(finder.youtube_videos) < config.break_limit:
             #     finder.youtube_videos = [finder.play_trailers[0]] + finder.youtube_videos
 
@@ -43,13 +44,13 @@ def download_extra(directory, config, tmp_folder):
             finder.youtube_videos = finder.play_trailers
 
         for youtube_video in finder.youtube_videos:
-            print(youtube_video['webpage_url'] + ' : ' +
+            log.info(youtube_video['webpage_url'] + ' : ' +
                   youtube_video['format'] +
                   ' (' + str(youtube_video['adjusted_rating']) + ')')
         for youtube_video in finder.play_trailers:
-            print('play trailer: ' + youtube_video['webpage_url'] + ' : ' + youtube_video['format'])
-        print('--------------------------------------------------------------------------------------')
-        print('downloading for: ' + directory.name)
+            log.info('play trailer: ' + youtube_video['webpage_url'] + ' : ' + youtube_video['format'])
+        log.info('--------------------------------------------------------------------------------------')
+        log.info('downloading for: ' + directory.name)
         count = 0
         tmp_folder = os.path.join(tmp_folder, 'tmp_0')
         while True:
@@ -89,30 +90,30 @@ def download_extra(directory, config, tmp_folder):
     def process_theme_music_config(tmp_folder):
 
         finder = ExtraFinder(directory, config)
-        print('processing: ' + directory.name)
+        log.info('processing: ' + directory.name)
         finder.search()
         finder.filter_search_result()
 
         for youtube_video in finder.youtube_videos:
-            print('--------------------------------------------------------------------------------------')
-            print(youtube_video['webpage_url'])
-            print(str(youtube_video['adjusted_rating']))
-            print(youtube_video['format'])
-            print(str(youtube_video['views_per_day']))
-        print('--------------------------------------------------------------------------------------')
-        print(directory.name)
+            log.info('--------------------------------------------------------------------------------------')
+            log.info(youtube_video['webpage_url'])
+            log.info(str(youtube_video['adjusted_rating']))
+            log.info(youtube_video['format'])
+            log.info(str(youtube_video['views_per_day']))
+        log.info('--------------------------------------------------------------------------------------')
+        log.info(directory.name)
 
         finder.apply_custom_filters()
         finder.order_results()
 
         for youtube_video in finder.youtube_videos:
-            print(youtube_video['webpage_url'] + ' : ' +
+            log.info(youtube_video['webpage_url'] + ' : ' +
                   youtube_video['format'] +
                   ' (' + str(youtube_video['adjusted_rating']) + ')')
         for youtube_video in finder.play_trailers:
-            print('play trailer: ' + youtube_video['webpage_url'] + ' : ' + youtube_video['format'])
-        print('--------------------------------------------------------------------------------------')
-        print('downloading for: ' + directory.name)
+            log.info('play trailer: ' + youtube_video['webpage_url'] + ' : ' + youtube_video['format'])
+        log.info('--------------------------------------------------------------------------------------')
+        log.info('downloading for: ' + directory.name)
         count = 0
         tmp_folder = os.path.join(tmp_folder, 'tmp_0')
         while True:
@@ -197,23 +198,23 @@ def download_extra(directory, config, tmp_folder):
 #                 pass
 #
 #         except FileNotFoundError as e:
-#             print('file not found: ' + str(e.args[0]))
+#             log.info('file not found: ' + str(e.args[0]))
 #             continue
 #
 #         except HTTPError:
-#             print('You might have been flagged by google search. try again tomorrow.')
+#             log.info('You might have been flagged by google search. try again tomorrow.')
 #             sys.exit()
 #
 #         except URLError:
-#             print('you might have lost your internet connections. exiting')
+#             log.info('you might have lost your internet connections. exiting')
 #             sys.exit()
 #
 #         except timeout:
-#             print('you might have lost your internet connections. exiting')
+#             log.info('you might have lost your internet connections. exiting')
 #             sys.exit()
 #
 #         except ConnectionResetError:
-#             print('you might have lost your internet connections. exiting')
+#             log.info('you might have lost your internet connections. exiting')
 #             sys.exit()
 #
 #         except KeyboardInterrupt:
