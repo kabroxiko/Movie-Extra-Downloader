@@ -143,6 +143,13 @@ class ExtraFinder:
 
             info = 'Video "' + youtube_video['webpage_url'] + '" was removed. reasons: '
             append_video = True
+            log.info('duration=' + str(youtube_video['duration']))
+
+            # TODO: Filter out only trailers
+            if youtube_video['duration'] >= 200:
+                info += 'long video, '
+                append_video = False
+                break
 
             for youtube_id in self.directory.banned_youtube_videos_id:
                 if youtube_id == youtube_video['id']:
