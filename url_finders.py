@@ -59,27 +59,21 @@ def google_search(query, limit):
 
 
 def youtube_search(query, limit):
-
     ret_url_list = list()
-
     for tries in range(1, 10):
         try:
             response = tools.retrieve_web_page('https://www.youtube.com/results?search_query=' +
                                                quote(query.encode('utf-8')),
                                                'youtube search result')
-
         except KeyboardInterrupt:
             raise
-
         except:
             e = sys.exc_info()[0]
             if tries > 3:
                 log.error('Failed to download google search result. Reason: ' + str(e))
                 raise
-
             log.error('Failed to download google search result, retrying. Reason: ' + str(e))
             sleep(1)
-
         else:
             if response:
                 soup = BeautifulSoup(response, "html.parser")
@@ -87,9 +81,7 @@ def youtube_search(query, limit):
                     url = 'https://www.youtube.com' + item['href']
                     ret_url_list.append(url.split('&')[0])
             break
-
     return ret_url_list[:limit]
-
 
 def youtube_channel_search(query, limit):
     # todo (1): implement youtube_channel_search.

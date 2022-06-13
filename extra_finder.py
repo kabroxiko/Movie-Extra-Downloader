@@ -24,26 +24,17 @@ class ExtraFinder:
         self.play_trailers = list()
 
     def search(self):
-
         def create_youtube_video():
-
             def get_video_data():
-
                 for tries in range(1, 11):
-
                     try:
-
                         with youtube_dl.YoutubeDL({'socket_timeout': '3', 'logger': log}) as ydl:
                             return ydl.extract_info(url, download=False)
-
                     except DownloadError as e:
-
                         if 'ERROR: Unable to download webpage:' in e.args[0]:
-
                             if tries > 3:
                                 log.error('hey, there: error!!!')
                                 raise
-
                             log.error('failed to get video data, retrying')
                             time.sleep(1)
                         else:
