@@ -130,7 +130,7 @@ def handle_directory(folder):
 
             if args.replace:
                 directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
-                shutil.rmtree(os.path.join(directory.full_path, extra_config.extra_type))
+                shutil.rmtree(os.path.join(directory.full_path, extra_config.extra_type), ignore_errors=True)
                 os.mkdir(os.path.join(directory.full_path, extra_config.extra_type))
 
             if not os.path.isdir(tmp_folder):
@@ -237,7 +237,7 @@ else:
     log.error('please specify a directory (-d) or a library (-l) to search extras for')
 
 try:
-    shutil.rmtree(tmp_folder)
+    shutil.rmtree(tmp_folder, ignore_errors=True)
 except FileNotFoundError:
     pass
 os.mkdir(tmp_folder)
