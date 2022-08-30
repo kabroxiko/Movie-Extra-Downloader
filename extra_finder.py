@@ -1,7 +1,7 @@
 import os, sys, logging
-from youtube_dl import DownloadError
+from yt_dlp import DownloadError
 import tools as tools
-import youtube_dl
+import yt_dlp
 import url_finders
 from bisect import bisect
 from datetime import date
@@ -28,7 +28,7 @@ class ExtraFinder:
             def get_video_data():
                 for tries in range(1, 11):
                     try:
-                        with youtube_dl.YoutubeDL({'socket_timeout': '3', 'logger': log}) as ydl:
+                        with yt_dlp.YoutubeDL({'socket_timeout': '3', 'logger': log}) as ydl:
                             return ydl.extract_info(url, download=False)
                     except DownloadError as e:
                         if 'ERROR: Unable to download webpage:' in e.args[0]:
@@ -456,7 +456,7 @@ class ExtraFinder:
 
             for tries in range(1, 11):
                 try:
-                    with youtube_dl.YoutubeDL(arguments) as ydl:
+                    with yt_dlp.YoutubeDL(arguments) as ydl:
                         meta = ydl.extract_info(youtube_video['webpage_url'])
                         downloaded_videos_meta.append(meta)
                         count += 1
