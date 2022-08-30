@@ -64,7 +64,7 @@ def handle_directory(folder):
                 else:
                     directory = Directory(folder)
 
-            extra_config = ExtraSettings(os.path.join(configs, config))
+            extra_config = ExtraSettings(os.path.join(extra_configs_directory, config))
 
             if args.replace and 'trailer' in extra_config.extra_type.lower():
                 args.force = True
@@ -215,8 +215,8 @@ c.read(os.path.join(os.path.dirname(sys.argv[0]), 'default_config.cfg'))
 
 tmp_folder = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
 
-configs = os.path.join(os.path.dirname(sys.argv[0]), 'extra_configs')
-configs_content = os.listdir(configs)
+extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]), 'extra_configs')
+configs_content = os.listdir(extra_configs_directory)
 
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
