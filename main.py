@@ -132,17 +132,17 @@ def download_extra(directory, config, tmp_folder):
         if downloaded_videos_meta:
             finder.move_videos(downloaded_videos_meta, tmp_folder)
 
-    if config.extra_type == 'trailers':
+    if config.extra_type.lower() == 'trailers':
         process_trailers_config(tmp_folder)
-    elif config.extra_type == 'interviews':
+    elif config.extra_type.lower() == 'interviews':
         process_interviews_config()
-    elif config.extra_type == 'behind the scenes':
+    elif config.extra_type.lower() == 'behind the scenes':
         process_behind_the_scenes_config()
-    elif config.extra_type == 'featurettes':
+    elif config.extra_type.lower() == 'featurettes':
         process_featurettes_config()
-    elif config.extra_type == 'theme-music':
+    elif config.extra_type.lower() == 'theme-music':
         process_theme_music_config(tmp_folder)
-    elif config.extra_type == 'deleted scenes':
+    elif config.extra_type.lower() == 'deleted scenes':
         process_deleted_scenes_config()
 
 #
