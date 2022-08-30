@@ -5,7 +5,7 @@ import os, sys, logging
 
 from urllib.error import HTTPError
 
-import tools
+import tools, json
 from bs4 import BeautifulSoup
 from urllib.parse import quote
 
@@ -86,3 +86,21 @@ def youtube_search(query, limit):
 def youtube_channel_search(query, limit):
     # todo (1): implement youtube_channel_search.
     pass
+
+def tmdb_search(tmdb_api_key, tmdb_id, limit):
+    ret_url_list = list()
+    response = tools.retrieve_web_page('https://api.themoviedb.org/3/movie/'
+                                       + str(tmdb_id) +
+                                       '/videos?api_key=' + tmdb_api_key +
+                                       '&language=en-US', 'tmdb movie videos')
+    if response is None:
+        return None
+    data = json.loads(response.read().decode('utf-8'))
+    response.close()
+
+    for result in data['results']:
+        if result['type'] == 'Trailer' or result['type'] == 'Teaser':
+            url = 'https://www.youtube.com/watch?v=' + result['key']
+            ret_url_list.append(url)
+
+    return ret_url_list[:limit]

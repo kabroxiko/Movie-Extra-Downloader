@@ -104,6 +104,9 @@ class ExtraFinder:
             elif search['source'] == 'google_channel_search':
                 urls = url_finders.youtube_channel_search(query, limit)
 
+            elif search['source'] == 'tmdb_search':
+                urls = url_finders.tmdb_search(self.directory.tmdb_api_key, self.directory.tmdb_id, 100)
+
             else:
                 log.error("The search engine \"" + search['source'] + "\" wasn't recognized. Skipping.")
                 log.error('Please use "google_search", "youtube_search" or "youtube_channel_search" as the source.')

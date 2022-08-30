@@ -10,6 +10,8 @@ class Directory(object):
     def __init__(self, full_path, tmdb_api_key=None, tmdb_id=None, json_dict=None):
 
         ########################################
+        self.tmdb_api_key = tmdb_api_key
+
         self.name = None
         self.full_path = None
         self.content = dict

@@ -212,6 +212,5 @@ def get_tmdb_details_data(tmdb_api_key, tmdb_id):
 
     return data
 
-
 def get_tmdb_crew_data(tmdb_api_key, tmdb_id):
     pass
