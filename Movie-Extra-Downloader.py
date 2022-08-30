@@ -60,7 +60,7 @@ def handle_directory(folder):
                 directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1]))
             except FileNotFoundError:
                 if has_tmdb_key:
-                    directory = Directory(folder, tmdb_api_key=c.get('SETTINGS', 'tmdb_api_key'))
+                    directory = Directory(folder, tmdb_api_key=default_config.get('SETTINGS', 'tmdb_api_key'))
                 else:
                     directory = Directory(folder)
 
@@ -210,8 +210,8 @@ def handle_library(library):
     return True
 
 
-c = configparser.ConfigParser()
-c.read(os.path.join(os.path.dirname(sys.argv[0]), 'default_config.cfg'))
+default_config = configparser.ConfigParser()
+default_config.read(os.path.join(os.path.dirname(sys.argv[0]), 'default_config.cfg'))
 
 tmp_folder = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
 
@@ -220,7 +220,7 @@ configs_content = os.listdir(extra_configs_directory)
 
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
-result = tools.get_tmdb_search_data(c.get('SETTINGS', 'tmdb_api_key'), 'star wars')
+result = tools.get_tmdb_search_data(default_config.get('SETTINGS', 'tmdb_api_key'), 'star wars')
 if result is None:
     log.error('Warning: No working TMDB api key was specified.')
     time.sleep(10)
