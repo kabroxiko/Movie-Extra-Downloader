@@ -77,9 +77,6 @@ def download_extra(directory, config, tmp_folder):
     def process_interviews_config():
         pass
 
-    def process_behind_the_scenes_config():
-        pass
-
     def process_deleted_scenes_config():
         pass
 
@@ -133,7 +130,7 @@ def download_extra(directory, config, tmp_folder):
     elif config.extra_type.lower() == 'interviews':
         process_interviews_config()
     elif config.extra_type.lower() == 'behind the scenes':
-        process_behind_the_scenes_config()
+        process_trailers_config(tmp_folder, 'behind the scenes')
     elif config.extra_type.lower() == 'featurettes':
         process_trailers_config(tmp_folder, 'featurettes')
     elif config.extra_type.lower() == 'theme-music':

@@ -99,7 +99,9 @@ def tmdb_search(tmdb_api_key, tmdb_id, type, limit):
     response.close()
 
     for result in data['results']:
-        if (type == 'Trailers' and (result['type'] == 'Trailer' or result['type'] == 'Teaser')) or (type == 'Featurettes' and (result['type'] == 'Featurette')):
+        if ((type == 'Trailers' and (result['type'] == 'Trailer' or result['type'] == 'Teaser')) or
+            (type == 'Featurettes' and (result['type'] == 'Featurette')) or
+            (type == 'Behind The Scenes' and (result['type'] == 'Behind the Scenes'))):
             url = 'https://www.youtube.com/watch?v=' + result['key']
             ret_url_list.append(url)
 
