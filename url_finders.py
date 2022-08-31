@@ -87,7 +87,7 @@ def youtube_channel_search(query, limit):
     # todo (1): implement youtube_channel_search.
     pass
 
-def tmdb_search(tmdb_api_key, tmdb_id, limit):
+def tmdb_search(tmdb_api_key, tmdb_id, type, limit):
     ret_url_list = list()
     response = tools.retrieve_web_page('https://api.themoviedb.org/3/movie/'
                                        + str(tmdb_id) +
@@ -99,7 +99,7 @@ def tmdb_search(tmdb_api_key, tmdb_id, limit):
     response.close()
 
     for result in data['results']:
-        if result['type'] == 'Trailer' or result['type'] == 'Teaser':
+        if (type == 'Trailers' and (result['type'] == 'Trailer' or result['type'] == 'Teaser')) or (type == 'Featurettes' and (result['type'] == 'Featurette')):
             url = 'https://www.youtube.com/watch?v=' + result['key']
             ret_url_list.append(url)
 
