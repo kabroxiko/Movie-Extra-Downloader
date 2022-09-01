@@ -133,6 +133,8 @@ def download_extra(directory, config, tmp_folder):
         process_trailers_config(tmp_folder, 'behind the scenes')
     elif config.extra_type.lower() == 'featurettes':
         process_trailers_config(tmp_folder, 'featurettes')
+    elif config.extra_type.lower() == 'scenes':
+        process_trailers_config(tmp_folder, 'scenes')
     elif config.extra_type.lower() == 'theme-music':
         process_theme_music_config(tmp_folder)
     elif config.extra_type.lower() == 'deleted scenes':
