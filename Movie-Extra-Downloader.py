@@ -20,6 +20,7 @@ parser.add_argument("-d", "--directory", help="directory to search extras for")
 parser.add_argument("-l", "--library", help="library of directories to search extras for")
 parser.add_argument("-f", "--force", action="store_true", help="force scan the directories.")
 parser.add_argument("-r", "--replace", action="store_true", help="remove and ban the existing extra.")
+parser.add_argument("-t", "--tmdbid", help="tmdb id.")
 args = parser.parse_args()
 
 if args.directory and os.path.split(args.directory)[1] == '':
@@ -47,6 +48,7 @@ elif 'sonarr_eventtype' in os.environ:
     log.info("directory: " + args.directory)
 elif 'radarr_eventtype' in os.environ:
     args.directory = os.environ.get('radarr_movie_path')
+    args.tmdbid = os.environ.get('radarr_movie_tmdbid')
     log.info("directory: " + args.directory)
 
 def handle_directory(folder):
@@ -60,7 +62,7 @@ def handle_directory(folder):
                 directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1]))
             except FileNotFoundError:
                 if has_tmdb_key:
-                    directory = Directory(folder, tmdb_api_key=tmdb_api_key)
+                    directory = Directory(folder, tmdb_api_key=tmdb_api_key, tmdb_id=args.tmdbid)
                 else:
                     directory = Directory(folder)
 
