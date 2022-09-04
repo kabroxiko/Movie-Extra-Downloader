@@ -105,7 +105,12 @@ class ExtraFinder:
                 urls = url_finders.youtube_channel_search(query, limit)
 
             elif search['source'] == 'tmdb_search':
-                urls = url_finders.tmdb_search(self.directory.tmdb_api_key, self.directory.tmdb_id, self.config.extra_type, 100)
+                if self.directory.tmdb_id:
+                    log.debug('tmdb_api_key: ' + str(self.directory.tmdb_api_key))
+                    urls = url_finders.tmdb_search(self.directory.tmdb_api_key, self.directory.tmdb_id, self.config.extra_type, 100)
+                else:
+                    log.error("tmdb_id is missing")
+                    continue
 
             else:
                 log.error("The search engine \"" + search['source'] + "\" wasn't recognized. Skipping.")
