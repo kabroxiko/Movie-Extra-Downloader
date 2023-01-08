@@ -1,5 +1,4 @@
 import os, sys, logging
-from yt_dlp import DownloadError
 import tools as tools
 import yt_dlp
 import url_finders
@@ -28,9 +27,9 @@ class ExtraFinder:
             def get_video_data():
                 for tries in range(1, 11):
                     try:
-                        with yt_dlp.YoutubeDL({'socket_timeout': '3', 'logger': log}) as ydl:
+                        with yt_dlp.YoutubeDL({'quiet': True, 'socket_timeout': '3', 'logger': log}) as ydl:
                             return ydl.extract_info(url, download=False)
-                    except DownloadError as e:
+                    except yt_dlp.DownloadError as e:
                         if 'ERROR: Unable to download webpage:' in e.args[0]:
                             if tries > 3:
                                 log.error('hey, there: error!!!')
@@ -107,7 +106,7 @@ class ExtraFinder:
             elif search['source'] == 'tmdb_search':
                 if self.directory.tmdb_id:
                     log.debug('tmdb_api_key: ' + str(self.directory.tmdb_api_key))
-                    urls = url_finders.tmdb_search(self.directory.tmdb_api_key, self.directory.tmdb_id, self.config.extra_type, 100)
+                    urls = url_finders.tmdb_search(self.directory.tmdb_api_key, self.directory.tmdb_id, self.directory.media_type, self.config.extra_type, 100)
                 else:
                     log.error("tmdb_id is missing")
                     continue
@@ -227,9 +226,10 @@ class ExtraFinder:
                 else:
                     original_title_in_video = True
 
-            if not original_title_in_video and not title_in_video:
-                append_video = False
-                info += 'not containing title, '
+            # TODO: Do not apply if tmdb
+            # if not original_title_in_video and not title_in_video:
+            #     append_video = False
+            #     info += 'not containing title, '
 
             if append_video:
                 filtered_candidates.append(youtube_video)
@@ -447,6 +447,8 @@ class ExtraFinder:
         downloaded_videos_meta = list()
 
         arguments = self.config.youtube_dl_arguments
+        arguments['writesubtitles'] = True
+        arguments['subtitle'] = '--write-sub --sub-lang en --write-auto-sub --sub-format srt'
         arguments['logger'] = log
         arguments['outtmpl'] = os.path.join(tmp_file, arguments['outtmpl'])
         for key, value in arguments.items():

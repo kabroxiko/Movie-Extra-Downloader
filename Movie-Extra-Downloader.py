@@ -18,9 +18,10 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--directory", help="directory to search extras for")
 parser.add_argument("-l", "--library", help="library of directories to search extras for")
-parser.add_argument("-f", "--force", action="store_true", help="force scan the directories.")
-parser.add_argument("-r", "--replace", action="store_true", help="remove and ban the existing extra.")
-parser.add_argument("-t", "--tmdbid", help="tmdb id.")
+parser.add_argument("-t", "--tmdbid", help="tmdb id to search extras for")
+parser.add_argument("-m", "--mediatype", help="media type to search extras for")
+parser.add_argument("-f", "--force", action="store_true", help="force scan the directories")
+parser.add_argument("-r", "--replace", action="store_true", help="remove and ban the existing extra")
 args = parser.parse_args()
 
 if args.directory and os.path.split(args.directory)[1] == '':
@@ -31,7 +32,7 @@ if args.library and os.path.split(args.library)[1] == '':
 
 # Setup logger
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(message)s'
 )
 log = logging.getLogger("med")
@@ -45,10 +46,12 @@ elif os.environ.get('radarr_eventtype') == "Test":
     sys.exit(0)
 elif 'sonarr_eventtype' in os.environ:
     args.directory = os.environ.get('sonarr_series_path')
+    args.mediatype = 'tv'
     log.info("directory: " + args.directory)
 elif 'radarr_eventtype' in os.environ:
     args.directory = os.environ.get('radarr_movie_path')
     args.tmdbid = os.environ.get('radarr_movie_tmdbid')
+    args.mediatype = 'movie'
     log.info("directory: " + args.directory)
 
 def handle_directory(folder):
@@ -62,7 +65,7 @@ def handle_directory(folder):
                 directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1]))
             except FileNotFoundError:
                 if has_tmdb_key:
-                    directory = Directory(folder, tmdb_api_key=tmdb_api_key, tmdb_id=args.tmdbid)
+                    directory = Directory(folder, tmdb_api_key=tmdb_api_key, tmdb_id=args.tmdbid, media_type=args.mediatype)
                 else:
                     directory = Directory(folder)
 
@@ -223,7 +226,7 @@ configs_content = os.listdir(extra_configs_directory)
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
 tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
-result = tools.get_tmdb_search_data(tmdb_api_key, 'star wars')
+result = tools.get_tmdb_search_data(tmdb_api_key, 'movie', 'star wars')
 if result is None:
     log.error('Warning: No working TMDB api key was specified.')
     time.sleep(10)
@@ -231,6 +234,9 @@ if result is None:
 else:
     has_tmdb_key = True
 
+if not args.mediatype:
+    log.error('please specify media type (-m) to search extras for')
+    sys.exit(1)
 
 if args.directory:
     handle_directory(args.directory)

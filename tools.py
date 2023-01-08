@@ -186,12 +186,13 @@ def apply_query_template(template, keys):
     return space_cleanup(ret)
 
 
-def get_tmdb_search_data(tmdb_api_key, title):
-    response = retrieve_web_page('https://api.themoviedb.org/3/search/movie'
-                                       '?api_key=' + tmdb_api_key +
-                                       '&language=en-US&query='
-                                       + quote(title.encode('utf-8')) +
-                                       '&page=1&include_adult=false', 'tmdb movie search page')
+def get_tmdb_search_data(tmdb_api_key, media_type, title):
+    url = 'https://api.themoviedb.org/3/search/' + media_type + \
+                '?api_key=' + tmdb_api_key + \
+                '&query=' + quote(title.encode('utf-8')) + \
+                '&language=en-US&page=1&include_adult=false'
+    log.debug('url: ' + url)
+    response = retrieve_web_page(url, 'tmdb movie search page')
     if response is None:
         return None
     data = json.loads(response.read().decode('utf-8'))
@@ -200,11 +201,12 @@ def get_tmdb_search_data(tmdb_api_key, title):
     return data
 
 
-def get_tmdb_details_data(tmdb_api_key, tmdb_id):
-    response = retrieve_web_page('https://api.themoviedb.org/3/movie/'
-                                       + str(tmdb_id) +
-                                       '?api_key=' + tmdb_api_key +
-                                       '&language=en-US', 'movie details')
+def get_tmdb_details_data(tmdb_api_key, tmdb_id, media_type="tv"):
+    url = 'https://api.themoviedb.org/3/' + media_type + '/' + str(tmdb_id) + \
+                                       '?api_key=' + tmdb_api_key + \
+                                       '&language=en-US'
+    log.debug('url: ' + url)
+    response = retrieve_web_page(url, 'movie details')
     if response is None:
         return None
     data = json.loads(response.read().decode('utf-8'))

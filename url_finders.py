@@ -87,22 +87,26 @@ def youtube_channel_search(query, limit):
     # todo (1): implement youtube_channel_search.
     pass
 
-def tmdb_search(tmdb_api_key, tmdb_id, type, limit):
+def tmdb_search(tmdb_api_key, tmdb_id, media_type, type, limit):
     ret_url_list = list()
-    response = tools.retrieve_web_page('https://api.themoviedb.org/3/movie/'
-                                       + str(tmdb_id) +
-                                       '/videos?api_key=' + tmdb_api_key +
-                                       '&language=en-US', 'tmdb movie videos')
+    url = 'https://api.themoviedb.org/3/' + media_type + '/' + str(tmdb_id) + '/videos' + \
+             '?api_key=' + tmdb_api_key + \
+             '&language=en-US'
+    log.debug('url: ' + url)
+    response = tools.retrieve_web_page(url, 'tmdb movie videos')
     if response is None:
         return None
     data = json.loads(response.read().decode('utf-8'))
     response.close()
 
+    log.debug('details_data: ' + str(data))
     for result in data['results']:
-        if ((type == 'Trailers' and (result['type'] == 'Trailer' or result['type'] == 'Teaser')) or
+        log.debug('type: ' + result['type'] + ' key: ' + result['key'])
+        if ((type == 'Behind The Scenes' and (result['type'] == 'Behind the Scenes')) or
             (type == 'Featurettes' and (result['type'] == 'Featurette')) or
             (type == 'Scenes' and (result['type'] == 'Clip')) or
-            (type == 'Behind The Scenes' and (result['type'] == 'Behind the Scenes'))):
+            (type == 'Trailers' and (result['type'] == 'Trailer' or result['type'] == 'Teaser')) or
+            (type == 'Others' and (result['type'] == 'Bloopers'))):
             url = 'https://www.youtube.com/watch?v=' + result['key']
             ret_url_list.append(url)
 
