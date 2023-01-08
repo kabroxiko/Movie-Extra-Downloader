@@ -52,7 +52,7 @@ elif 'radarr_eventtype' in os.environ:
     log.info("directory: " + args.directory)
 
 def handle_directory(folder):
-    log.info('working on directory: "' + os.path.join('...', os.path.split(folder)[1]) + '"')
+    log.info('working on directory: "' + folder + '"')
     for config in configs_content:
 
         if config.startswith('.') or config.startswith('_'):
