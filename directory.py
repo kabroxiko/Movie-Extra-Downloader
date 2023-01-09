@@ -40,7 +40,6 @@ class Directory(object):
                 setattr(self, key, value)
         else:
             self.update_all(full_path=full_path, tmdb_api_key=tmdb_api_key, tmdb_id=tmdb_id, media_type=media_type)
-        log.debug('trailer_youtube_video_id: ' + str(self.trailer_youtube_video_id))
 
     @classmethod
     def load_directory(cls, file):
