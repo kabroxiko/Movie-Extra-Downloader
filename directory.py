@@ -242,6 +242,7 @@ class Directory(object):
                     return None
 
             search_data = tools.get_tmdb_search_data(tmdb_api_key, media_type, self.movie_title)
+            log.debug('search_data: ' + str(search_data))
 
             if search_data is None or search_data['total_results'] == 0:
                 return list()
