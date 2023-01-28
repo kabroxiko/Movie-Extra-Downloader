@@ -62,7 +62,13 @@ def handle_directory(folder):
             continue
         try:
             try:
-                directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1]))
+                if args.force != True:
+                    directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1]))
+                else:
+                    if has_tmdb_key:
+                        directory = Directory(folder, tmdb_api_key=tmdb_api_key, tmdb_id=args.tmdbid, media_type=args.mediatype)
+                    else:
+                        directory = Directory(folder)
             except FileNotFoundError:
                 if has_tmdb_key:
                     directory = Directory(folder, tmdb_api_key=tmdb_api_key, tmdb_id=args.tmdbid, media_type=args.mediatype)
@@ -147,6 +153,7 @@ def handle_directory(folder):
 
             if args.force:
                 # todo: delete all paths in the old record that are not in the new record
+                log.debug("record: " + str(directory.record))
                 pass
 
         except FileNotFoundError as e:
