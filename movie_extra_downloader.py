@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-from urllib.error import URLError, HTTPError
-from _socket import timeout
+"""Search and download media extras."""
 from bisect import bisect
 from datetime import date
 
 from urllib.parse import quote
 from urllib.request import urlopen
+from urllib.error import URLError, HTTPError
 
 import os
 import sys
@@ -15,12 +15,13 @@ import logging
 import configparser
 import argparse
 import time
-import yt_dlp
 import shutil
 import codecs
 import json
 import traceback
 import hashlib
+import yt_dlp
+from _socket import timeout
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory',
@@ -59,12 +60,12 @@ elif os.environ.get('radarr_eventtype') == 'Test':
 elif 'sonarr_eventtype' in os.environ:
     args.directory = os.environ.get('sonarr_series_path')
     args.mediatype = 'tv'
-    log.info('directory: ' + args.directory)
+    log.info('directory: %s', args.directory)
 elif 'radarr_eventtype' in os.environ:
     args.directory = os.environ.get('radarr_movie_path')
     args.tmdbid = os.environ.get('radarr_movie_tmdbid')
     args.mediatype = 'movie'
-    log.info('directory: ' + args.directory)
+    log.info('directory: %s', args.directory)
 
 
 def make_list_from_string(string, delimiter=',',
@@ -94,8 +95,33 @@ def apply_query_template(template, keys):
 def replace_roman_numbers(string):
     ret = ' ' + string.lower() + ' '
 
-    ret = ret.replace(' ix ', ' 9 ').replace(' viiii ', ' 9 ').replace(' viii ', ' 8 ').replace(' vii ', ' 7 ').replace(' vi ', ' 6 ').replace(' iv ', ' 4 ').replace(' iiii ', ' 4 ').replace(' iii ', ' 3 ').replace(' ii ', ' 2 ').replace(' trailer 4 ', ' trailer ').replace(' trailer 3 ', ' trailer ').replace(' trailer 2 '
-            , ' trailer ').replace(' trailer 1 ', ' trailer ')
+    ret = ret.replace(
+        ' ix ',
+        ' 9 ').replace(
+        ' viiii ',
+        ' 9 ').replace(
+        ' viii ',
+        ' 8 ').replace(
+        ' vii ',
+        ' 7 ').replace(
+        ' vi ',
+        ' 6 ').replace(
+        ' iv ',
+        ' 4 ').replace(
+        ' iiii ',
+        ' 4 ').replace(
+        ' iii ',
+        ' 3 ').replace(
+        ' ii ',
+        ' 2 ').replace(
+        ' trailer 4 ',
+        ' trailer ').replace(
+        ' trailer 3 ',
+        ' trailer ').replace(
+        ' trailer 2 ',
+        ' trailer ').replace(
+        ' trailer 1 ',
+        ' trailer ')
 
     return space_cleanup(ret)
 
@@ -103,9 +129,57 @@ def replace_roman_numbers(string):
 def get_keyword_list(string):
 
     ret = ' ' + get_clean_string(string).lower() + ' '
-    ret = ret.replace(' the ', ' ').replace(' in ', ' ').replace(' a ',
-            ' ').replace(' by ', ' ').replace(' for ', ' ').replace(' is ', ' ').replace(' am ', ' ').replace(' an ',
-            ' ').replace(' in ', ' ').replace(' with ', ' ').replace(' from ', ' ').replace(' and ', ' ').replace(' movie ', ' ').replace(' trailer ', ' ').replace(' interview ', ' ').replace(' interviews ', ' ').replace(' scenes ', ' ').replace(' scene ', ' ').replace(' official ', ' ').replace(' hd ', ' ').replace(' hq ', ' ').replace(' lq ', ' ').replace(' 1080p ', ' ').replace(' 720p ', ' ').replace(' of ', ' ')
+    ret = ret.replace(
+        ' the ',
+        ' ').replace(
+        ' in ',
+        ' ').replace(
+        ' a ',
+        ' ').replace(
+        ' by ',
+        ' ').replace(
+        ' for ',
+        ' ').replace(
+        ' is ',
+        ' ').replace(
+        ' am ',
+        ' ').replace(
+        ' an ',
+        ' ').replace(
+        ' in ',
+        ' ').replace(
+        ' with ',
+        ' ').replace(
+        ' from ',
+        ' ').replace(
+        ' and ',
+        ' ').replace(
+        ' movie ',
+        ' ').replace(
+        ' trailer ',
+        ' ').replace(
+        ' interview ',
+        ' ').replace(
+        ' interviews ',
+        ' ').replace(
+        ' scenes ',
+        ' ').replace(
+        ' scene ',
+        ' ').replace(
+        ' official ',
+        ' ').replace(
+        ' hd ',
+        ' ').replace(
+        ' hq ',
+        ' ').replace(
+        ' lq ',
+        ' ').replace(
+        ' 1080p ',
+        ' ').replace(
+        ' 720p ',
+        ' ').replace(
+        ' of ',
+        ' ')
 
     return list(set(space_cleanup(ret).split(' ')))
 
@@ -113,19 +187,66 @@ def get_keyword_list(string):
 def get_clean_string(string):
     ret = ' ' + string.lower() + ' '
 
-    ret = ret.replace('(', '').replace(')', '').replace('[', '').replace(']', '').replace('{', '').replace('}', '').replace(':', '').replace(';', '').replace('?', '').replace("'", '').replace('\xe2\x80\x99', '').replace('\xc2\xb4', '').replace('`', '').replace('*', ' ').replace('.', ' ').replace('\xc2\xb7', '-').replace(' -',
-            ' ').replace('- ', ' ').replace('_', ' ').replace(' + ',
-            ' : ').replace('+', '/').replace(' : ', ' + ').replace('/ '
-            , ' ').replace(' /', ' ').replace(' & ', ' ')
+    ret = ret.replace(
+        '(',
+        '').replace(
+        ')',
+        '').replace(
+        '[',
+        '').replace(
+        ']',
+        '').replace(
+        '{',
+        '').replace(
+        '}',
+        '').replace(
+        ':',
+        '').replace(
+        ';',
+        '').replace(
+        '?',
+        '').replace(
+        "'",
+        '').replace(
+        '\xe2\x80\x99',
+        '').replace(
+        '\xc2\xb4',
+        '').replace(
+        '`',
+        '').replace(
+        '*',
+        ' ').replace(
+        '.',
+        ' ').replace(
+        '\xc2\xb7',
+        '-').replace(
+        ' -',
+        ' ').replace(
+        '- ',
+        ' ').replace(
+        '_',
+        ' ').replace(
+        ' + ',
+        ' : ').replace(
+        '+',
+        '/').replace(
+        ' : ',
+        ' + ').replace(
+        '/ ',
+        ' ').replace(
+        ' /',
+        ' ').replace(
+        ' & ',
+        ' ')
 
     ret_tup = ret.split(' ')
     ret_count = 0
     for ret_tup_count in range(len(ret_tup) - 1):
         if len(ret_tup[ret_tup_count]) == 1 \
-            and len(ret_tup[ret_tup_count + 1]) == 1:
+                and len(ret_tup[ret_tup_count + 1]) == 1:
             ret_count += 1
-            ret = ret[:ret_count] + ret[ret_count:ret_count
-                + 1].replace(' ', '.') + ret[ret_count + 1:]
+            ret = ret[:ret_count] + ret[ret_count:ret_count +
+                                        1].replace(' ', '.') + ret[ret_count + 1:]
             ret_count += 1
         else:
             ret_count += len(ret_tup[ret_tup_count]) + 1
@@ -145,6 +266,7 @@ def space_cleanup(string):
 
 
 def hash_file(file_path):
+    response = None
     if not os.path.isdir(file_path):
         md5 = hashlib.md5()
         with open(file_path, 'rb') as file:
@@ -153,88 +275,87 @@ def hash_file(file_path):
                 if not data:
                     break
                 md5.update(data)
-        return md5.hexdigest()
+        response = md5.hexdigest()
+    return response
 
 
 def retrieve_web_page(url, page_name='page'):
 
     response = None
-    log.info('Downloading ' + page_name + '.')
+    log.info('Downloading %s', page_name + '.')
 
     for tries in range(1, 10):
         try:
             response = urlopen(url, timeout=2)
             break
-        except ((UnicodeEncodeError, e)):
+        except UnicodeEncodeError as e:
 
-            log.error('Failed to download ' + page_name + ' : '
-                      + str(e) + '. Skipping.')
+            log.error('Failed to download %s : %s. Skipping.', page_name, str(e))
             break
-        except (timeout):
+        except timeout:
 
             if tries > 5:
                 log.error('You might have lost internet connection.')
                 break
 
             time.sleep(1)
-            log.error('Failed to download ' + page_name
-                      + ' : timed out. Retrying.')
-        except ((HTTPError, e)):
+            log.error('Failed to download %s : %s : timed out. Retrying.', page_name, str(e))
 
-            log.error('Failed to download ' + page_name + ' : '
-                      + str(e) + '. Skipping.')
+        except HTTPError as e:
+
+            log.error('Failed to download %s : %s. Skipping.', page_name, str(e))
             break
-        except (URLError):
+        except URLError:
 
             if tries > 3:
                 log.error('You might have lost internet connection.')
                 raise
 
             time.sleep(1)
-            log.error('Failed to download ' + page_name + '. Retrying.')
+            log.error('Failed to download %s', page_name + '. Retrying.')
 
     return response
 
 
 def tmdb_search(
-    tmdb_api_key,
-    tmdb_id,
-    media_type,
-    type,
-    limit,):
+        tmdb_id,
+        media_type,
+        extra_type,
+        limit,):
     ret_url_list = list()
     url = 'https://api.themoviedb.org/3/' + media_type + '/' \
         + str(tmdb_id) + '/videos' + '?api_key=' + tmdb_api_key \
         + '&language=en-US'
-    log.debug('url: ' + url)
+    log.debug('url: %s', url)
     response = retrieve_web_page(url, 'tmdb movie videos')
     if response is None:
         return None
     data = json.loads(response.read().decode('utf-8'))
     response.close()
 
-    log.debug('details_data: ' + str(data))
-    for result in data['results']:
-        log.debug('type: ' + result['type'] + ' key: ' + result['key'])
-        if type == 'Behind The Scenes' and result['type'] \
-            == 'Behind the Scenes' or type == 'Featurettes' \
-            and result['type'] == 'Featurette' or type == 'Scenes' \
-            and result['type'] == 'Clip' or type == 'Trailers' \
-            and (result['type'] == 'Trailer' or result['type']
-                 == 'Teaser') or type == 'Others' and result['type'] \
-            == 'Bloopers':
-            url = 'https://www.youtube.com/watch?v=' + result['key']
-            ret_url_list.append(url)
+    log.debug('details_data: %s', str(data))
+    log.debug('Search for: %s', extra_type)
+    for data in data['results']:
+        log.debug('Found: type=%s key=%s', data['type'], data['key'])
+        if extra_type == 'Behind The Scenes' \
+            and data['type'] == 'Behind the Scenes' or extra_type == 'Featurettes' \
+            and data['type'] == 'Featurette' or extra_type == 'Scenes' \
+            and data['type'] == 'Clip' or extra_type == 'Trailers' \
+            and (data['type'] == 'Trailer' or data['type'] == 'Teaser') \
+            or extra_type == 'Others' \
+            and data['type'] == 'Bloopers':
+
+            ret_url_list.append('https://www.youtube.com/watch?v=' + data['key'])
 
     return ret_url_list[:limit]
 
 
-def get_tmdb_search_data(tmdb_api_key, media_type, title):
+def get_tmdb_search_data(media_type, title):
     url = 'https://api.themoviedb.org/3/search/' + media_type \
         + '?api_key=' + tmdb_api_key + '&query=' \
         + quote(title.encode('utf-8')) \
         + '&language=en-US&page=1&include_adult=false'
-    log.debug('url: ' + url)
+    log.debug('url: %s', url)
     response = retrieve_web_page(url, 'tmdb movie search page')
     if response is None:
         return None
@@ -262,22 +383,24 @@ class ExtraFinder:
         def create_youtube_video():
 
             def get_video_data():
+                youtube_info = None
                 for tries in range(1, 11):
                     try:
                         with yt_dlp.YoutubeDL({'quiet': True,
-                                'socket_timeout': '3',
-                                'logger': log}) as ydl:
-                            return ydl.extract_info(url, download=False)
-                    except ((yt_dlp.DownloadError, e)):
+                                               'socket_timeout': '3',
+                                               'logger': log}) as ydl:
+                            youtube_info = ydl.extract_info(url, download=False)
+                            break
+                    except yt_dlp.DownloadError as e:
                         if 'ERROR: Unable to download webpage:' \
-                            in e.args[0]:
+                                in e.args[0]:
                             if tries > 3:
                                 log.error('hey, there: error!!!')
                                 raise
                             log.error('failed to get video data, retrying')
                             time.sleep(1)
-                        else:
-                            return None
+
+                return youtube_info
 
             youtube_video = get_video_data()
 
@@ -299,12 +422,11 @@ class ExtraFinder:
             if youtube_video['view_count'] is None:
                 youtube_video['view_count'] = 0
 
-            youtube_video['adjusted_rating'] = \
-                youtube_video['average_rating'] * (1 - 1
-                    / (youtube_video['view_count'] / 60) ** 0.5)
+            youtube_video['adjusted_rating'] = youtube_video['average_rating'] * \
+                (1 - 1 / (youtube_video['view_count'] / 60) ** 0.5)
 
             if youtube_video['width'] is None or youtube_video['height'
-                    ] is None:
+                                                               ] is None:
                 youtube_video['resolution_ratio'] = 1
                 youtube_video['resolution'] = 144
             else:
@@ -322,7 +444,7 @@ class ExtraFinder:
                     1080,
                     1440,
                     2160,
-                    ]
+                ]
 
                 youtube_video['resolution'] = \
                     resolutions[bisect(resolutions, resolution * 1.2)
@@ -332,11 +454,10 @@ class ExtraFinder:
                 if youtube_video['upload_date'] is not None:
                     date_str = youtube_video['upload_date']
                     upload_date = date(int(date_str[:4]),
-                            int(date_str[4:6]), int(date_str[6:8]))
+                                       int(date_str[4:6]), int(date_str[6:8]))
                     time_delta = date.today() - upload_date
-                    youtube_video['views_per_day'] = \
-                        youtube_video['view_count'] / (365
-                            + time_delta.total_seconds() / 60 / 60 / 24)
+                    youtube_video['views_per_day'] = youtube_video['view_count'] / \
+                        (365 + time_delta.total_seconds() / 60 / 60 / 24)
                 else:
                     log.error('no "upload_date"!!!')
                     youtube_video['views_per_day'] = 0
@@ -349,16 +470,16 @@ class ExtraFinder:
 
         for (search_index, search) in self.config.searches.items():
             query = apply_query_template(search['query'],
-                    self.directory.__dict__)
+                                         self.directory.__dict__)
             limit = int(search['limit'])
 
             if self.directory.tmdb_id:
-                log.debug('tmdb_api_key: '
-                          + str(self.directory.tmdb_api_key))
-                urls = tmdb_search(self.directory.tmdb_api_key,
-                                   self.directory.tmdb_id,
+                log.debug('tmdb_api_key: %s',
+                          str(tmdb_api_key))
+                urls = tmdb_search(self.directory.tmdb_id,
                                    self.directory.media_type,
                                    self.config.extra_type, 100)
+                log.debug('urls= %s', urls)
             else:
                 log.error('tmdb_id is missing')
                 continue
@@ -378,7 +499,6 @@ class ExtraFinder:
                     self.youtube_videos.append(video)
                     if not video['categories']:
                         self.play_trailers.append(video)
-        return
 
     def filter_search_result(self):
 
@@ -389,14 +509,12 @@ class ExtraFinder:
             info = 'Video "' + youtube_video['webpage_url'] \
                 + '" was removed. reasons: '
             append_video = True
-            log.info('duration=' + str(youtube_video['duration']))
-
-            # TODO: Filter out only trailers
+            log.info('duration: %s', str(youtube_video['duration']))
 
             if youtube_video['duration'] >= 200:
                 info += 'long video, '
                 append_video = False
-                break
+                continue
 
             for youtube_id in self.directory.banned_youtube_videos_id:
                 if youtube_id == youtube_video['id']:
@@ -427,7 +545,7 @@ class ExtraFinder:
                 buffer = 2
             for keyword in self.directory.banned_title_keywords:
                 if ' ' + keyword.lower() + ' ' in ' ' \
-                    + youtube_video['title'].lower() + ' ':
+                        + youtube_video['title'].lower() + ' ':
                     buffer -= 1
                     if buffer < 0:
                         append_video = False
@@ -463,7 +581,7 @@ class ExtraFinder:
 
             for keyword in self.directory.movie_title_keywords:
                 if ' ' + keyword.lower() + ' ' not in ' ' \
-                    + youtube_video['title'].lower() + ' ':
+                        + youtube_video['title'].lower() + ' ':
                     buffer -= 1
                     if buffer < 0:
                         break
@@ -476,24 +594,19 @@ class ExtraFinder:
                         / 4 + 0.1)
 
                 for keyword in \
-                    self.directory.movie_original_title_keywords:
+                        self.directory.movie_original_title_keywords:
                     if ' ' + keyword.lower() + ' ' not in ' ' \
-                        + youtube_video['title'].lower() + ' ':
+                            + youtube_video['title'].lower() + ' ':
                         buffer -= 1
                         if buffer < 0:
                             break
                 else:
                     original_title_in_video = True
 
-            # TODO: Do not apply if tmdb
-            # if not original_title_in_video and not title_in_video:
-            #     append_video = False
-            #     info += 'not containing title, '
-
             if append_video:
                 filtered_candidates.append(youtube_video)
             else:
-                log.info(info[:-2] + '.')
+                log.info('%s.', info[:-2])
 
         self.youtube_videos = filtered_candidates
 
@@ -523,7 +636,7 @@ class ExtraFinder:
                 buffer = 2
             for keyword in self.directory.banned_title_keywords:
                 if ' ' + keyword.lower() + ' ' in ' ' \
-                    + youtube_video['title'].lower() + ' ':
+                        + youtube_video['title'].lower() + ' ':
                     buffer -= 1
                     if buffer < 0:
                         append_video = False
@@ -542,7 +655,7 @@ class ExtraFinder:
 
             for keyword in self.directory.movie_title_keywords:
                 if keyword.lower() not in youtube_video['title'
-                        ].lower():
+                                                        ].lower():
                     buffer -= 1
                     if buffer < 0:
                         break
@@ -555,9 +668,9 @@ class ExtraFinder:
                         / 4 + 0.1)
 
                 for keyword in \
-                    self.directory.movie_original_title_keywords:
+                        self.directory.movie_original_title_keywords:
                     if keyword.lower() not in youtube_video['title'
-                            ].lower():
+                                                            ].lower():
                         buffer -= 1
                         if buffer < 0:
                             break
@@ -571,7 +684,7 @@ class ExtraFinder:
             if append_video:
                 filtered_candidates.append(youtube_video)
             else:
-                log.info(info[:-2] + '.')
+                log.info('%s.', info[:-2])
 
         self.play_trailers = filtered_candidates
 
@@ -620,8 +733,6 @@ class ExtraFinder:
             if keep:
                 if len(ret) > limit_value:
                     ret = ret[:limit_value]
-                else:
-                    ret = ret
             else:
                 if len(ret) > limit_value:
                     ret = ret[limit_value:]
@@ -638,8 +749,6 @@ class ExtraFinder:
             if keep:
                 if len(ret) > limit_value:
                     ret = ret[:limit_value]
-                else:
-                    ret = ret
             else:
                 if len(ret) > limit_value:
                     ret = ret[limit_value:]
@@ -673,7 +782,7 @@ class ExtraFinder:
                 if filter_args[1] == 'lowest':
                     filtered_list = lowest()
             if self.play_trailers and self.config.extra_type \
-                == 'trailers':
+                    == 'trailers':
                 if len(filtered_list) + 1 >= self.config.break_limit:
                     break
             else:
@@ -681,8 +790,6 @@ class ExtraFinder:
                     break
 
         self.youtube_videos = filtered_list
-
-        return
 
     def order_results(self):
 
@@ -696,24 +803,24 @@ class ExtraFinder:
 
         if highest:
             self.youtube_videos = sorted(self.youtube_videos,
-                    key=lambda x: x[key], reverse=True)
+                                         key=lambda x: x[key], reverse=True)
         else:
             self.youtube_videos = sorted(self.youtube_videos,
-                    key=lambda x: x[key])
+                                         key=lambda x: x[key])
 
         preferred_videos = list()
         not_preferred_channels = list()
 
         for youtube_video in self.youtube_videos:
             if youtube_video['uploader'] \
-                in self.config.preferred_channels:
+                    in self.config.preferred_channels:
                 preferred_videos.append(youtube_video)
             else:
                 not_preferred_channels.append(youtube_video)
 
         self.youtube_videos = preferred_videos + not_preferred_channels
 
-        self.play_trailers = sorted(self.play_trailers, key=lambda x: \
+        self.play_trailers = sorted(self.play_trailers, key=lambda x:
                                     x['view_count'], reverse=True)
 
     def download_videos(self, tmp_file):
@@ -722,12 +829,12 @@ class ExtraFinder:
 
         arguments = self.config.youtube_dl_arguments
         arguments['writesubtitles'] = True
-
-        arguments['subtitle'] = \
-            '--write-sub --sub-lang en --write-auto-sub --sub-format srt'
+        arguments['quiet'] = True
+        arguments['noprogress'] = True
+        arguments['subtitle'] = '--write-sub --sub-lang en --write-auto-sub --sub-format srt'
         arguments['logger'] = log
-        arguments['outtmpl'] = os.path.join(tmp_file,
-                arguments['outtmpl'])
+        arguments['outtmpl'] = os.path.join(tmp_file, arguments['outtmpl'])
+        log.debug('arguments: %s', arguments)
         for (key, value) in arguments.items():
             if isinstance(value, str):
                 if value.lower() == 'false' or value.lower() == 'no':
@@ -744,17 +851,16 @@ class ExtraFinder:
             for tries in range(1, 11):
                 try:
                     with yt_dlp.YoutubeDL(arguments) as ydl:
-                        meta = \
-                            ydl.extract_info(youtube_video['webpage_url'
-                                ])
+                        meta = ydl.extract_info(youtube_video['webpage_url'])
                         downloaded_videos_meta.append(meta)
                         count += 1
                         break
-                except ((DownloadError, e)):
+                except DownloadError as e:
 
                     if tries > 3:
-                        if str(e).startswith('ERROR: Did not get any data blocks'):
-                            return
+                        if str(e).startswith(
+                                'ERROR: Did not get any data blocks'):
+                            return None
                         log.error('failed to download the video.')
                         break
                     log.error('failed to download the video. retrying')
@@ -782,15 +888,15 @@ class ExtraFinder:
             self.directory.record.append({
                 'hash': file_hash,
                 'file_path': os.path.join(self.directory.full_path,
-                        self.config.extra_type, file),
+                                          self.config.extra_type, file),
                 'file_name': file,
                 'youtube_video_id': vid_id,
                 'config_type': self.config.extra_type,
-                })
+            })
 
         def determine_case():
             for (content_file, content_file_hash) in \
-                self.directory.content.items():
+                    self.directory.content.items():
                 if content_file == file:
                     return 'name_in_directory'
 
@@ -799,7 +905,7 @@ class ExtraFinder:
 
             for sub_content in self.directory.subdirectories.values():
                 for (content_file, content_file_hash) in \
-                    sub_content.items():
+                        sub_content.items():
                     if content_file == file:
                         return 'name_in_directory'
                     if file_hash == content_file_hash:
@@ -821,7 +927,7 @@ class ExtraFinder:
                 copy_file()
                 record_file()
                 if self.config.extra_type \
-                    in self.directory.subdirectories:
+                        in self.directory.subdirectories:
                     self.directory.subdirectories[self.config.extra_type] = \
                         {file: file_hash}
                 else:
@@ -834,10 +940,10 @@ class ExtraFinder:
             source_path = os.path.join(tmp_folder, file)
             if self.config.extra_type == 'theme-music':
                 target_path = os.path.join(self.directory.full_path,
-                        'theme.mp3')
+                                           'theme.mp3')
             else:
                 target_path = os.path.join(self.directory.full_path,
-                        self.config.extra_type, file)
+                                           self.config.extra_type, file)
 
             file_hash = hash_file(source_path)
 
@@ -856,7 +962,7 @@ class ExtraFinder:
                 copy_file()
 
                 if self.config.extra_type \
-                    in self.directory.subdirectories:
+                        in self.directory.subdirectories:
 
                     self.directory.subdirectories[self.config.extra_type][file] = \
                         file_hash
@@ -868,10 +974,6 @@ class ExtraFinder:
 
 
 class ExtraSettings:
-
-    # todo: make into dictionary.
-
-    # todo (0): make sure nothing fails to import.
 
     def __init__(self, config_path):
 
@@ -885,18 +987,12 @@ class ExtraSettings:
 
         self.searches = self.get_searches()
 
-        self.required_phrases = \
-            make_list_from_string(self.config['FILTERING'
-                                  ].get('required_phrases').replace('\n'
-                                  , ''))
-        self.banned_phrases = \
-            make_list_from_string(self.config['FILTERING'
-                                  ].get('banned_phrases').replace('\n',
-                                  ''))
-        self.banned_channels = \
-            make_list_from_string(self.config['FILTERING'
-                                  ].get('banned_channels').replace('\n'
-                                  , ''))
+        self.required_phrases = make_list_from_string(
+            self.config['FILTERING'].get('required_phrases').replace('\n', ''))
+        self.banned_phrases = make_list_from_string(
+            self.config['FILTERING'].get('banned_phrases').replace('\n', ''))
+        self.banned_channels = make_list_from_string(
+            self.config['FILTERING'].get('banned_channels').replace('\n', ''))
 
         self.custom_filters = self.get_custom_filters()
         self.last_resort_policy = \
@@ -904,9 +1000,10 @@ class ExtraSettings:
                         ].get('last_resort_policy')
 
         self.priority_order = self.config['PRIORITY_RULES'].get('order')
-        self.preferred_channels = \
-            make_list_from_string(self.config['PRIORITY_RULES'
-                                  ].get('preferred_channels', '').replace('\n', ''))
+        self.preferred_channels = make_list_from_string(
+            self.config['PRIORITY_RULES'].get(
+                'preferred_channels', '').replace(
+                '\n', ''))
 
         self.videos_to_download = \
             self.config['DOWNLOADING_AND_POSTPROCESSING'
@@ -916,22 +1013,20 @@ class ExtraSettings:
                         ].get('naming_scheme')
         self.youtube_dl_arguments = \
             json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'
-                       ].get('youtube_dl_arguments'))
+                                   ].get('youtube_dl_arguments'))
 
-        self.disable_play_trailers = self.config['EXTRA_CONFIG'
-                ].getboolean('disable_play_trailers', False)
-        self.only_play_trailers = self.config['EXTRA_CONFIG'
-                ].getboolean('only_play_trailers', False)
+        self.disable_play_trailers = self.config['EXTRA_CONFIG'].getboolean(
+            'disable_play_trailers', False)
+        self.only_play_trailers = self.config['EXTRA_CONFIG'].getboolean(
+            'only_play_trailers', False)
         self.skip_movies_with_existing_trailers = \
             self.config['EXTRA_CONFIG'
-                        ].getboolean('skip_movies_with_existing_trailers'
-                , False)
+                        ].getboolean('skip_movies_with_existing_trailers', False)
 
         self.skip_movies_with_existing_theme = \
             self.config['EXTRA_CONFIG'
                         ].getboolean('skip_movies_with_existing_theme',
-                False)
-        return
+                                     False)
 
     def get_searches(self):
 
@@ -987,29 +1082,28 @@ def download_extra(directory, config, tmp_folder):
 
     def process(tmp_folder, extra_type):
         finder = ExtraFinder(directory, config)
-        log.info('processing: ' + directory.name)
+        log.info('processing: %s', directory.name)
         finder.search()
         finder.filter_search_result()
 
         for youtube_video in finder.youtube_videos:
-            log.info('--------------------------------------------------------------------------------------')
             log.info(youtube_video['webpage_url'])
             log.info(str(youtube_video['adjusted_rating']))
             log.info(youtube_video['format'])
             log.info(str(youtube_video['views_per_day']))
-        log.info('--------------------------------------------------------------------------------------')
+
         log.info(directory.name)
 
         finder.apply_custom_filters()
         finder.order_results()
 
         if finder.play_trailers and finder.youtube_videos \
-            and not config.disable_play_trailers:
+                and not config.disable_play_trailers:
             if 'duration' in finder.youtube_videos[0] and 'duration' \
-                in finder.play_trailers[0]:
+                    in finder.play_trailers[0]:
                 if finder.youtube_videos[0]['duration'] - 23 \
                     <= finder.play_trailers[0]['duration'] \
-                    <= finder.youtube_videos[0]['duration'] + 5:
+                        <= finder.youtube_videos[0]['duration'] + 5:
                     finder.youtube_videos = [finder.play_trailers[0]] \
                         + finder.youtube_videos
                     log.info('picked play trailer.')
@@ -1021,18 +1115,18 @@ def download_extra(directory, config, tmp_folder):
                 return
 
         if not finder.youtube_videos and finder.play_trailers \
-            and not config.disable_play_trailers:
+                and not config.disable_play_trailers:
             finder.youtube_videos = finder.play_trailers
 
         for youtube_video in finder.youtube_videos:
-            log.info(youtube_video['webpage_url'] + ' : '
-                     + youtube_video['format'] + ' ('
-                     + str(youtube_video['adjusted_rating']) + ')')
+            log.info('%s : %s (%s)',
+                    youtube_video['webpage_url'],
+                    youtube_video['format'],
+                    str(youtube_video['adjusted_rating']))
         for youtube_video in finder.play_trailers:
             log.info('play trailer: ' + youtube_video['webpage_url']
                      + ' : ' + youtube_video['format'])
-        log.info('--------------------------------------------------------------------------------------')
-        log.info('downloading for: ' + directory.name)
+        log.info('downloading for: %s', directory.name)
         count = 0
         tmp_folder = os.path.join(tmp_folder, 'tmp_0')
         while True:
@@ -1068,19 +1162,16 @@ def download_extra(directory, config, tmp_folder):
         process(tmp_folder, 'scenes')
 
 
-class Directory(object):
+class Directory:
 
     def __init__(
-        self,
-        full_path,
-        tmdb_api_key=None,
-        tmdb_id=None,
-        media_type=None,
-        json_dict=None,):
+            self,
+            full_path,
+            tmdb_id=None,
+            media_type=None,
+            json_dict=None,):
 
         # #######################################
-
-        self.tmdb_api_key = tmdb_api_key
 
         self.name = None
         self.full_path = None
@@ -1111,7 +1202,7 @@ class Directory(object):
                 setattr(self, key, value)
         else:
             self.update_all(full_path=full_path,
-                            tmdb_api_key=tmdb_api_key, tmdb_id=tmdb_id,
+                            tmdb_id=tmdb_id,
                             media_type=media_type)
 
     @classmethod
@@ -1120,20 +1211,18 @@ class Directory(object):
             return Directory(None, json_dict=json.load(load_file))
 
     def update_all(
-        self,
-        full_path=None,
-        tmdb_api_key=None,
-        tmdb_id=None,
-        media_type=None,):
+            self,
+            full_path=None,
+            tmdb_id=None,
+            media_type=None,):
 
         if full_path is not None:
             self.name = os.path.split(full_path)[1]
             self.full_path = full_path
         self.update_content()
-        self.update_movie_info(tmdb_api_key=tmdb_api_key,
-                               tmdb_id=tmdb_id, media_type=media_type)
+        self.update_movie_info(tmdb_id=tmdb_id, media_type=media_type)
         if tmdb_api_key is not None:
-            self.update_similar_results(tmdb_api_key, media_type)
+            self.update_similar_results(media_type)
 
     def update_content(self):
 
@@ -1144,7 +1233,7 @@ class Directory(object):
             if os.path.isdir(os.path.join(self.full_path, file)):
                 sub_content = dict()
                 for sub_file in os.listdir(os.path.join(self.full_path,
-                        file)):
+                                                        file)):
                     sub_content[sub_file] = \
                         hash_file(os.path.join(self.full_path, file,
                                   sub_file))
@@ -1154,10 +1243,9 @@ class Directory(object):
                     hash_file(os.path.join(self.full_path, file))
 
     def update_movie_info(
-        self,
-        tmdb_api_key=None,
-        tmdb_id=None,
-        media_type=None,):
+            self,
+            tmdb_id=None,
+            media_type=None,):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
@@ -1183,8 +1271,8 @@ class Directory(object):
 
         def get_info_from_details():
             details_data = get_tmdb_details_data(tmdb_api_key, tmdb_id,
-                    media_type)
-            log.debug('details_data: ' + str(details_data))
+                                                 media_type)
+            log.debug('details_data: %s', str(details_data))
             if details_data is not None:
                 try:
                     self.tmdb_id = details_data['id']
@@ -1202,17 +1290,15 @@ class Directory(object):
                     else:
                         self.movie_release_year = None
                     return True
-                except ((KeyError, ke)):
+                except KeyError as ke:
                     return False
-                except ((TypeError, te)):
+                except TypeError as te:
                     return False
             else:
                 return False
 
         def get_info_from_search():
-            search_data = get_tmdb_search_data(tmdb_api_key,
-                    media_type, self.movie_title)
-            log.debug('search_data: ' + str(search_data))
+            search_data = get_tmdb_search_data(media_type, self.movie_title)
 
             if search_data is None or search_data['total_results'] == 0:
                 return False
@@ -1224,41 +1310,41 @@ class Directory(object):
                 movie_data = search_data['results'][0]
             else:
 
-                for result in (search_data['results'])[:5]:
+                for data in (search_data['results'])[:5]:
                     try:
-                        if result['release_date'] is None:
-                            result['release_date'] = '000000000000000'
+                        if data['release_date'] is None:
+                            data['release_date'] = '000000000000000'
                             continue
                     except KeyError:
-                        result['release_date'] = '000000000000000'
+                        data['release_date'] = '000000000000000'
                         continue
                     if movie_data is None:
                         if str(self.movie_release_year) \
-                            == (result['release_date'])[:4]:
-                            movie_data = result
-                        elif (result['release_date'])[6:8] in ['09',
-                                '10', '11', '12'] \
-                            and str(self.movie_release_year - 1) \
-                            == (result['release_date'])[:4]:
+                                == (data['release_date'])[:4]:
+                            movie_data = data
+                        elif (data['release_date'])[6:8] in ['09',
+                                                               '10', '11', '12'] \
+                                and str(self.movie_release_year - 1) \
+                                == (data['release_date'])[:4]:
 
-                            movie_data = result
-                        elif (result['release_date'])[6:8] in ['01',
-                                '02', '03', '04'] \
-                            and str(self.movie_release_year + 1) \
-                            == (result['release_date'])[:4]:
+                            movie_data = data
+                        elif (data['release_date'])[6:8] in ['01',
+                                                               '02', '03', '04'] \
+                                and str(self.movie_release_year + 1) \
+                                == (data['release_date'])[:4]:
 
-                            movie_data = result
+                            movie_data = data
                     elif movie_backup_data is None:
                         if str(self.movie_release_year - 1) \
-                            == (result['release_date'])[:4]:
-                            movie_backup_data = result
+                                == (data['release_date'])[:4]:
+                            movie_backup_data = data
                         elif str(self.movie_release_year + 1) \
-                            == (result['release_date'])[:4]:
+                                == (data['release_date'])[:4]:
 
-                            movie_backup_data = result
+                            movie_backup_data = data
 
                 if movie_data is None and movie_backup_data is not None:
-                    log.info('None of the search results had a correct release year, picking the next best result')
+                    log.info( 'None of the search results had a correct release year, picking the next best result')
                     movie_data = movie_backup_data
 
                 if movie_data is None:
@@ -1285,8 +1371,6 @@ class Directory(object):
                     get_clean_string(movie_data['original_name'])
                 self.movie_title_keywords = \
                     get_keyword_list(movie_data['name'])
-                self.movie_original_name_keywords = \
-                    get_keyword_list(movie_data['original_name'])
                 if len((movie_data['first_air_date'])[:4]) == 4:
                     self.movie_release_year = \
                         int((movie_data['first_air_date'])[:4])
@@ -1308,7 +1392,7 @@ class Directory(object):
 
         return get_info_from_directory()
 
-    def update_similar_results(self, tmdb_api_key, media_type):
+    def update_similar_results(self, media_type):
 
         def find_similar_results():
 
@@ -1316,12 +1400,12 @@ class Directory(object):
                 similar_movies_data = list()
                 movie_found = False
 
-                for result in search_data['results']:
+                for data in search_data['results']:
 
-                    if self.tmdb_id == result['id']:
+                    if self.tmdb_id == data['id']:
                         movie_found = True
                     else:
-                        similar_movies_data.append(result)
+                        similar_movies_data.append(data)
 
                 if movie_found:
                     return similar_movies_data
@@ -1333,37 +1417,34 @@ class Directory(object):
                 movie_found = False
                 backup_found = False
 
-                for result in search_data['results']:
+                for data in search_data['results']:
 
                     if not movie_found and str(self.movie_release_year) \
-                        == (result['release_date'])[:4]:
+                            == (data['release_date'])[:4]:
                         movie_found = True
                         continue
                     elif not backup_found:
 
-                        if (result['release_date'])[6:8] in ['09', '10'
-                                , '11', '12'] \
-                            and str(self.movie_release_year - 1) \
-                            == (result['release_date'])[:4]:
+                        if (data['release_date'])[6:8] in ['09', '10', '11', '12'] \
+                                and str(self.movie_release_year - 1) \
+                                == (data['release_date'])[:4]:
                             backup_found = True
-                        elif (result['release_date'])[6:8] in ['01',
-                                '02', '03'] \
+                        elif (data['release_date'])[6:8] in ['01',
+                                                               '02', '03'] \
                             and str(self.movie_release_year + 1
-                                    == (result['release_date'])[:4]):
+                                    == (data['release_date'])[:4]):
 
                             backup_found = True
 
                     if len(similar_movies_data) < 5:
-                        similar_movies_data.append(result)
+                        similar_movies_data.append(data)
 
                 if movie_found or backup_found:
                     return similar_movies_data
                 else:
                     return None
 
-            search_data = get_tmdb_search_data(tmdb_api_key,
-                    media_type, self.movie_title)
-            log.debug('search_data: ' + str(search_data))
+            search_data = get_tmdb_search_data(media_type, self.movie_title)
 
             if search_data is None or search_data['total_results'] == 0:
                 return list()
@@ -1389,16 +1470,16 @@ class Directory(object):
 
                 if media_type == 'movie':
                     for word in get_keyword_list(similar_movie['title'
-                            ]):
+                                                               ]):
 
                         if word.lower() not in self.movie_title.lower() \
-                            and word.lower() \
-                            not in self.banned_title_keywords:
+                                and word.lower() \
+                                not in self.banned_title_keywords:
 
                             if self.movie_original_title is not None:
 
                                 if word.lower() \
-                                    not in self.movie_original_title.lower():
+                                        not in self.movie_original_title.lower():
                                     self.banned_title_keywords.append(word)
                             else:
 
@@ -1406,15 +1487,15 @@ class Directory(object):
                     try:
                         if len((similar_movie['release_date'])[:4]) \
                             == 4 and int((similar_movie['release_date'
-                                ])[:4]) \
+                                                        ])[:4]) \
                             not in [self.movie_release_year] \
                             + self.banned_years \
                             and (similar_movie['release_date'])[:4] \
-                            not in self.movie_title:
+                                not in self.movie_title:
 
-                            self.banned_years.append(int((similar_movie['release_date'
-                                    ])[:4]))
-                    except (KeyError, e):
+                            self.banned_years.append(
+                                int((similar_movie['release_date'])[:4]))
+                    except KeyError as e:
                         pass
 
         similar_movies = find_similar_results()
@@ -1434,31 +1515,28 @@ class Directory(object):
 
 
 def handle_directory(folder):
-    log.info('working on directory: "' + folder + '"')
+    log.info('working on directory: " %s', folder + '"')
     for config in configs_content:
 
         if config.startswith('.') or config.startswith('_'):
             continue
         try:
             try:
-                if args.force != True:
-                    directory = \
-                        Directory.load_directory(os.path.join(records,
-                            os.path.split(folder)[1]))
+                if not args.force:
+                    directory = Directory.load_directory(
+                        os.path.join(records, os.path.split(folder)[1]))
                 else:
                     if has_tmdb_key:
                         directory = Directory(folder,
-                                tmdb_api_key=tmdb_api_key,
-                                tmdb_id=args.tmdbid,
-                                media_type=args.mediatype)
+                                              tmdb_id=args.tmdbid,
+                                              media_type=args.mediatype)
                     else:
                         directory = Directory(folder)
             except FileNotFoundError:
                 if has_tmdb_key:
                     directory = Directory(folder,
-                            tmdb_api_key=tmdb_api_key,
-                            tmdb_id=args.tmdbid,
-                            media_type=args.mediatype)
+                                          tmdb_id=args.tmdbid,
+                                          media_type=args.mediatype)
                 else:
                     directory = Directory(folder)
 
@@ -1467,19 +1545,19 @@ def handle_directory(folder):
                               config))
 
             if args.replace and 'trailer' \
-                in extra_config.extra_type.lower():
+                    in extra_config.extra_type.lower():
                 args.force = True
 
             if extra_config.config_id in directory.completed_configs \
-                and not args.force:
+                    and not args.force:
                 continue
 
             if extra_config.skip_movies_with_existing_trailers \
-                and not args.replace:
+                    and not args.replace:
                 skip = False
                 for file in os.listdir(directory.full_path):
                     if file.lower().endswith('trailer.mp4') \
-                        or file.lower().endswith('trailer.mkv'):
+                            or file.lower().endswith('trailer.mkv'):
                         skip = True
                         break
                 if skip:
@@ -1492,7 +1570,7 @@ def handle_directory(folder):
                         os.listdir(os.path.join(directory.full_path,
                                    'trailers')):
                         if file.lower().endswith('.mp4') \
-                            or file.lower().endswith('.mkv'):
+                                or file.lower().endswith('.mkv'):
                             skip = True
                             break
                     if skip:
@@ -1504,8 +1582,8 @@ def handle_directory(folder):
                 skip = False
                 for file in os.listdir(directory.full_path):
                     if file.lower().endswith('theme.mp3') \
-                        or file.lower().endswith('theme.wma') \
-                        or file.lower().endswith('theme.flac'):
+                            or file.lower().endswith('theme.wma') \
+                            or file.lower().endswith('theme.flac'):
                         skip = True
                         break
                 if skip:
@@ -1518,8 +1596,8 @@ def handle_directory(folder):
                         os.listdir(os.path.join(directory.full_path,
                                    'theme-music')):
                         if file.lower().endswith('.mp3') \
-                            or file.lower().endswith('.wma') \
-                            or file.lower().endswith('.flac'):
+                                or file.lower().endswith('.wma') \
+                                or file.lower().endswith('.flac'):
                             skip = True
                             break
                     if skip:
@@ -1538,7 +1616,8 @@ def handle_directory(folder):
                 extra_config.force = True
 
             if args.replace:
-                directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
+                directory.banned_youtube_videos_id.append(
+                    directory.trailer_youtube_video_id)
                 shutil.rmtree(os.path.join(directory.full_path,
                               extra_config.extra_type),
                               ignore_errors=True)
@@ -1553,18 +1632,16 @@ def handle_directory(folder):
             directory.save_directory(records)
 
             if args.force:
+                log.debug('record: %s', str(directory.record))
 
-                # todo: delete all paths in the old record that are not in the new record
+        except FileNotFoundError as e:
 
-                log.debug('record: ' + str(directory.record))
-                pass
-        except (FileNotFoundError, e):
-
-            log.error('file not found: ' + str(e))
+            log.error('file not found: %s', str(e))
             continue
         except HTTPError:
 
-            log.error('You might have been flagged by google search. try again tomorrow.')
+            log.error(
+                'You might have been flagged by google search. try again tomorrow.')
             sys.exit()
         except URLError:
 
@@ -1586,7 +1663,8 @@ def handle_directory(folder):
 
 def handle_library(library):
     if args.replace:
-        log.error('the replace mode is unable in library mode, please use the directory mode.')
+        log.error(
+            'the replace mode is unable in library mode, please use the directory mode.')
         return False
     for folder in os.listdir(library):
         if folder.startswith('.'):
@@ -1597,35 +1675,23 @@ def handle_library(library):
             handle_directory(os.path.join(library, folder))
         except KeyboardInterrupt:
             raise
-        except (Exception, e):
-            log.error('----------------------------------------------------------')
-            log.error('----------------------------------------------------------')
-            log.error('----------------------------------------------------------')
-            log.error('----------------------------------------------------------')
-            log.error('----------------------------------------------------------')
-            log.error('--------------------AN ERROR OCCURRED---------------------')
-            log.error('------------------------SKIPPING--------------------------')
-            log.error('------PLEASE REPORT MOVIE TITLE TO THE GITHUB ISSUES------')
-            log.error('-----------------THE SCRIPT WILL CONTINUE-----------------')
-            log.error('----------------------------------------------------------')
-            log.error('-------------------- Exception: --------------------------')
+        except Exception as e:
+
+            log.error(
+                '--------------------AN ERROR OCCURRED---------------------')
+            log.error(
+                '------------------------SKIPPING--------------------------')
+            log.error(
+                '------PLEASE REPORT MOVIE TITLE TO THE GITHUB ISSUES------')
+            log.error(
+                '-----------------THE SCRIPT WILL CONTINUE-----------------')
+            log.error(
+                '-------------------- Exception: --------------------------')
             log.error(e)
             log.error(traceback.format_exc())
-            log.error('----------------------------------------------------------')
-            log.error('----------------------------------------------------------')
             time.sleep(1)
-            exit()
+            sys.exit(1)
 
-            if not os.path.isdir(os.path.join(os.path.dirname(sys.argv[0]),
-                                 'failed_movies')):
-                os.mkdir(os.path.join(os.path.dirname(sys.argv[0]),
-                         'failed_movies'))
-            if not os.path.isdir(os.path.join(os.path.dirname(sys.argv[0]),
-                                 'failed_movies', folder)):
-                os.mkdir(os.path.join(os.path.dirname(sys.argv[0]),
-                         'failed_movies', folder))
-            if library == 'testdir':
-                raise
     return True
 
 
@@ -1636,13 +1702,13 @@ default_config.read(os.path.join(os.path.dirname(sys.argv[0]),
 tmp_folder = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
 
 extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]),
-        'extra_configs')
+                                       'extra_configs')
 configs_content = os.listdir(extra_configs_directory)
 
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
 tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
-result = get_tmdb_search_data(tmdb_api_key, 'movie', 'star wars')
+result = get_tmdb_search_data('movie', 'star wars')
 if result is None:
     log.error('Warning: No working TMDB api key was specified.')
     time.sleep(10)
@@ -1659,7 +1725,8 @@ if args.directory:
 elif args.library:
     handle_library(args.library)
 else:
-    log.error('please specify a directory (-d) or a library (-l) to search extras for')
+    log.error(
+        'please specify a directory (-d) or a library (-l) to search extras for')
 
 try:
     shutil.rmtree(tmp_folder, ignore_errors=True)
