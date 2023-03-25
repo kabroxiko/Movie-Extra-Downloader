@@ -319,11 +319,10 @@ def retrieve_web_page(url, page_name='page'):
 
 def tmdb_search(
         tmdb_id,
-        media_type,
         extra_type,
         limit,):
-    ret_url_list = list()
-    url = 'https://api.themoviedb.org/3/' + media_type + '/' \
+    ret_url_list = []
+    url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' \
         + str(tmdb_id) + '/videos' + '?api_key=' + tmdb_api_key \
         + '&language=en-US'
     log.debug('url: %s', url)
@@ -350,8 +349,8 @@ def tmdb_search(
     return ret_url_list[:limit]
 
 
-def get_tmdb_search_data(media_type, title):
-    url = 'https://api.themoviedb.org/3/search/' + media_type \
+def get_tmdb_search_data(title, mediatype):
+    url = 'https://api.themoviedb.org/3/search/' + mediatype \
         + '?api_key=' + tmdb_api_key + '&query=' \
         + quote(title.encode('utf-8')) \
         + '&language=en-US&page=1&include_adult=false'
@@ -375,8 +374,8 @@ class ExtraFinder:
         self.config = extra_config
         self.complete = True
 
-        self.youtube_videos = list()
-        self.play_trailers = list()
+        self.youtube_videos = []
+        self.play_trailers = []
 
     def search(self):
 
@@ -466,7 +465,7 @@ class ExtraFinder:
                 youtube_video['views_per_day'] = 0
             return youtube_video
 
-        url_list = list()
+        url_list = []
 
         for (search_index, search) in self.config.searches.items():
             query = apply_query_template(search['query'],
@@ -477,7 +476,6 @@ class ExtraFinder:
                 log.debug('tmdb_api_key: %s',
                           str(tmdb_api_key))
                 urls = tmdb_search(self.directory.tmdb_id,
-                                   self.directory.media_type,
                                    self.config.extra_type, 100)
                 log.debug('urls= %s', urls)
             else:
@@ -502,7 +500,7 @@ class ExtraFinder:
 
     def filter_search_result(self):
 
-        filtered_candidates = list()
+        filtered_candidates = []
 
         for youtube_video in self.youtube_videos:
 
@@ -610,7 +608,7 @@ class ExtraFinder:
 
         self.youtube_videos = filtered_candidates
 
-        filtered_candidates = list()
+        filtered_candidates = []
 
         for youtube_video in self.play_trailers:
 
@@ -693,7 +691,7 @@ class ExtraFinder:
         def absolute():
 
             minimum = filter_args[0] == 'min'
-            ret = list()
+            ret = []
 
             for youtube_video in filtered_list:
                 if minimum:
@@ -707,7 +705,7 @@ class ExtraFinder:
         def relative():
 
             minimum = filter_args[0] == 'min'
-            ret = list()
+            ret = []
             max_value = float('-inf')
 
             for youtube_video in filtered_list:
@@ -737,7 +735,7 @@ class ExtraFinder:
                 if len(ret) > limit_value:
                     ret = ret[limit_value:]
                 else:
-                    ret = list()
+                    ret = []
 
             return ret
 
@@ -753,7 +751,7 @@ class ExtraFinder:
                 if len(ret) > limit_value:
                     ret = ret[limit_value:]
                 else:
-                    ret = list()
+                    ret = []
 
             return ret
 
@@ -808,8 +806,8 @@ class ExtraFinder:
             self.youtube_videos = sorted(self.youtube_videos,
                                          key=lambda x: x[key])
 
-        preferred_videos = list()
-        not_preferred_channels = list()
+        preferred_videos = []
+        not_preferred_channels = []
 
         for youtube_video in self.youtube_videos:
             if youtube_video['uploader'] \
@@ -825,7 +823,7 @@ class ExtraFinder:
 
     def download_videos(self, tmp_file):
 
-        downloaded_videos_meta = list()
+        downloaded_videos_meta = []
 
         arguments = self.config.youtube_dl_arguments
         arguments['writesubtitles'] = True
@@ -855,7 +853,7 @@ class ExtraFinder:
                         downloaded_videos_meta.append(meta)
                         count += 1
                         break
-                except DownloadError as e:
+                except yt_dlp.DownloadError as e:
 
                     if tries > 3:
                         if str(e).startswith(
@@ -977,7 +975,7 @@ class ExtraSettings:
 
     def __init__(self, config_path):
 
-        with codecs.open(config_path, 'r', 'utf-8') as file:
+        with codecs.open(config_path, 'r') as file:
             self.config = configparser.RawConfigParser()
             self.config.read_file(file)
 
@@ -1030,7 +1028,7 @@ class ExtraSettings:
 
     def get_searches(self):
 
-        ret = dict()
+        ret = {}
 
         for (option, value) in self.config['SEARCHES'].items():
 
@@ -1040,14 +1038,14 @@ class ExtraSettings:
                 continue
 
             if index not in ret:
-                ret[index] = dict()
+                ret[index] = {}
             ret[index]['_'.join(option.split('_')[:-1])] = value
 
         return ret
 
     def get_custom_filters(self):
 
-        ret = dict()
+        ret = {}
 
         for (option, value) in self.config['CUSTOM_FILTERS'].items():
 
@@ -1064,14 +1062,14 @@ class ExtraSettings:
                 continue
 
             if index not in ret:
-                ret[index] = list()
+                ret[index] = []
             try:
                 ret[index].append('_'.join(option.split('_')[1:])
                                   + ':::' + value)
             except ValueError:
                 continue
 
-        sorted_ret = list()
+        sorted_ret = []
         for key in sorted(ret.keys()):
             sorted_ret.append(ret[key])
 
@@ -1168,7 +1166,6 @@ class Directory:
             self,
             full_path,
             tmdb_id=None,
-            media_type=None,
             json_dict=None,):
 
         # #######################################
@@ -1176,24 +1173,23 @@ class Directory:
         self.name = None
         self.full_path = None
         self.content = dict
-        self.subdirectories = dict()
+        self.subdirectories = {}
 
         self.tmdb_id = None
-        self.media_type = media_type
         self.movie_title = None
         self.movie_original_title = None
         self.movie_original_title_keywords = None
         self.movie_release_year = None
-        self.movie_title_keywords = list()
-        self.movie_crew_data = list()
+        self.movie_title_keywords = []
+        self.movie_crew_data = []
         self.trailer_youtube_video_id = None
 
-        self.banned_title_keywords = list()
-        self.banned_years = list()
-        self.banned_youtube_videos_id = list()
+        self.banned_title_keywords = []
+        self.banned_years = []
+        self.banned_youtube_videos_id = []
 
-        self.record = list()
-        self.completed_configs = list()
+        self.record = []
+        self.completed_configs = []
 
         # #######################################
 
@@ -1202,36 +1198,34 @@ class Directory:
                 setattr(self, key, value)
         else:
             self.update_all(full_path=full_path,
-                            tmdb_id=tmdb_id,
-                            media_type=media_type)
+                            tmdb_id=tmdb_id)
 
     @classmethod
     def load_directory(cls, file):
-        with open(file, 'r') as load_file:
+        with open(file, 'r', 'utf-8') as load_file:
             return Directory(None, json_dict=json.load(load_file))
 
     def update_all(
             self,
             full_path=None,
-            tmdb_id=None,
-            media_type=None,):
+            tmdb_id=None):
 
         if full_path is not None:
             self.name = os.path.split(full_path)[1]
             self.full_path = full_path
         self.update_content()
-        self.update_movie_info(tmdb_id=tmdb_id, media_type=media_type)
+        self.update_movie_info(tmdb_id=tmdb_id)
         if tmdb_api_key is not None:
-            self.update_similar_results(media_type)
+            self.update_similar_results()
 
     def update_content(self):
 
-        self.content = dict()
-        self.subdirectories = dict()
+        self.content = {}
+        self.subdirectories = {}
 
         for file in os.listdir(self.full_path):
             if os.path.isdir(os.path.join(self.full_path, file)):
-                sub_content = dict()
+                sub_content = {}
                 for sub_file in os.listdir(os.path.join(self.full_path,
                                                         file)):
                     sub_content[sub_file] = \
@@ -1244,8 +1238,7 @@ class Directory:
 
     def update_movie_info(
             self,
-            tmdb_id=None,
-            media_type=None,):
+            tmdb_id=None):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
@@ -1269,9 +1262,21 @@ class Directory:
 
             return True
 
+        def get_tmdb_details_data(tmdb_id):
+            url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' + str(tmdb_id) + \
+                                            '?api_key=' + tmdb_api_key + \
+                                            '&language=en-US'
+            log.debug('url: %s', url)
+            response = retrieve_web_page(url, 'movie details')
+            if response is None:
+                return None
+            data = json.loads(response.read().decode('utf-8'))
+            response.close()
+
+            return data
+
         def get_info_from_details():
-            details_data = get_tmdb_details_data(tmdb_api_key, tmdb_id,
-                                                 media_type)
+            details_data = get_tmdb_details_data(tmdb_id)
             log.debug('details_data: %s', str(details_data))
             if details_data is not None:
                 try:
@@ -1298,7 +1303,7 @@ class Directory:
                 return False
 
         def get_info_from_search():
-            search_data = get_tmdb_search_data(media_type, self.movie_title)
+            search_data = get_tmdb_search_data(self.movie_title, args.mediatype)
 
             if search_data is None or search_data['total_results'] == 0:
                 return False
@@ -1351,7 +1356,7 @@ class Directory:
                     movie_data = search_data['results'][0]
 
             self.tmdb_id = movie_data['id']
-            if media_type == 'movie':
+            if args.mediatype == 'movie':
                 self.movie_title = get_clean_string(movie_data['title'])
                 self.movie_original_title = \
                     get_clean_string(movie_data['original_title'])
@@ -1364,7 +1369,6 @@ class Directory:
                         int((movie_data['release_date'])[:4])
                 else:
                     self.movie_release_year = None
-                return True
             else:
                 self.movie_title = get_clean_string(movie_data['name'])
                 self.movie_original_title = \
@@ -1376,14 +1380,12 @@ class Directory:
                         int((movie_data['first_air_date'])[:4])
                 else:
                     self.movie_release_year = None
-                return True
+            return True
 
         if tmdb_api_key is not None:
             if tmdb_id is not None:
                 if get_info_from_details():
                     return True
-                else:
-                    tmdb_id = None
             if get_info_from_directory():
                 if get_info_from_search():
                     return True
@@ -1392,62 +1394,50 @@ class Directory:
 
         return get_info_from_directory()
 
-    def update_similar_results(self, media_type):
+    def update_similar_results(self):
 
         def find_similar_results():
 
             def find_by_tmdb_id():
-                similar_movies_data = list()
-                movie_found = False
-
+                similar_movies_data = []
                 for data in search_data['results']:
-
-                    if self.tmdb_id == data['id']:
-                        movie_found = True
-                    else:
+                    if self.tmdb_id != data['id']:
                         similar_movies_data.append(data)
-
-                if movie_found:
-                    return similar_movies_data
-                else:
-                    return None
+                return similar_movies_data
 
             def find_by_release_year():
-                similar_movies_data = list()
+                similar_movies_data = []
                 movie_found = False
                 backup_found = False
+                result = None
 
                 for data in search_data['results']:
+                    log.info('find_by_release_year: release_date=%s', data['release_date'])
 
                     if not movie_found and str(self.movie_release_year) \
                             == (data['release_date'])[:4]:
                         movie_found = True
                         continue
-                    elif not backup_found:
 
-                        if (data['release_date'])[6:8] in ['09', '10', '11', '12'] \
-                                and str(self.movie_release_year - 1) \
-                                == (data['release_date'])[:4]:
+                    if not backup_found:
+                        if data['release_date'][6:8] in ['09', '10', '11', '12'] \
+                                and str(self.movie_release_year - 1) == data['release_date'][:4]:
                             backup_found = True
-                        elif (data['release_date'])[6:8] in ['01',
-                                                               '02', '03'] \
-                            and str(self.movie_release_year + 1
-                                    == (data['release_date'])[:4]):
-
+                        elif data['release_date'][6:8] in ['01', '02', '03'] \
+                                and str(self.movie_release_year + 1) == data['release_date'][:4]:
                             backup_found = True
 
                     if len(similar_movies_data) < 5:
                         similar_movies_data.append(data)
 
                 if movie_found or backup_found:
-                    return similar_movies_data
-                else:
-                    return None
+                    result = similar_movies_data
+                return result
 
-            search_data = get_tmdb_search_data(media_type, self.movie_title)
+            search_data = get_tmdb_search_data(self.movie_title, args.mediatype)
 
             if search_data is None or search_data['total_results'] == 0:
-                return list()
+                return []
 
             ret = find_by_tmdb_id()
             if ret is not None:
@@ -1463,12 +1453,12 @@ class Directory:
             return None
 
         def process_similar_results():
-            self.banned_title_keywords = list()
-            self.banned_years = list()
+            self.banned_title_keywords = []
+            self.banned_years = []
 
             for similar_movie in similar_movies:
 
-                if media_type == 'movie':
+                if args.mediatype == 'movie':
                     for word in get_keyword_list(similar_movie['title'
                                                                ]):
 
@@ -1502,8 +1492,6 @@ class Directory:
         if similar_movies is not None:
             process_similar_results()
             return True
-        else:
-            return False
 
     def save_directory(self, save_path):
         self.content = None
@@ -1528,24 +1516,20 @@ def handle_directory(folder):
                 else:
                     if has_tmdb_key:
                         directory = Directory(folder,
-                                              tmdb_id=args.tmdbid,
-                                              media_type=args.mediatype)
+                                              tmdb_id=args.tmdbid)
                     else:
                         directory = Directory(folder)
             except FileNotFoundError:
                 if has_tmdb_key:
                     directory = Directory(folder,
-                                          tmdb_id=args.tmdbid,
-                                          media_type=args.mediatype)
+                                          tmdb_id=args.tmdbid)
                 else:
                     directory = Directory(folder)
 
-            extra_config = \
-                ExtraSettings(os.path.join(extra_configs_directory,
-                              config))
+            extra_config = ExtraSettings(os.path.join(extra_configs_directory,
+                                                      config))
 
-            if args.replace and 'trailer' \
-                    in extra_config.extra_type.lower():
+            if args.replace and 'trailer' in extra_config.extra_type.lower():
                 args.force = True
 
             if extra_config.config_id in directory.completed_configs \
@@ -1609,7 +1593,7 @@ def handle_directory(folder):
 
             if args.force:
                 old_record = directory.record
-                directory.record = list()
+                directory.record = []
                 for record in old_record:
                     if record != extra_config.extra_type:
                         directory.record.append(record)
@@ -1708,7 +1692,7 @@ configs_content = os.listdir(extra_configs_directory)
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
 tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
-result = get_tmdb_search_data('movie', 'star wars')
+result = get_tmdb_search_data('star wars', 'movie')
 if result is None:
     log.error('Warning: No working TMDB api key was specified.')
     time.sleep(10)
