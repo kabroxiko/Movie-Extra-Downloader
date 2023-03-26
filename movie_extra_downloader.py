@@ -26,8 +26,7 @@ from _socket import timeout
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory',
                     help='directory to search extras for')
-parser.add_argument('-l', '--library',
-                    help='library of directories to search extras for')
+
 parser.add_argument('-t', '--tmdbid',
                     help='tmdb id to search extras for')
 parser.add_argument('-m', '--mediatype',
@@ -40,9 +39,6 @@ args = parser.parse_args()
 
 if args.directory and os.path.split(args.directory)[1] == '':
     args.directory = os.path.split(args.directory)[0]
-
-if args.library and os.path.split(args.library)[1] == '':
-    args.library = os.path.split(args.library)[0]
 
 # Setup logger
 
@@ -316,10 +312,7 @@ def retrieve_web_page(url, page_name='page'):
     return response
 
 
-def search_tmdb_by_id(
-        tmdb_id,
-        extra_type,
-        limit,):
+def search_tmdb_by_id(tmdb_id, extra_type, limit):
     ret_url_list = []
     url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' \
         + str(tmdb_id) + '/videos' \
@@ -1205,9 +1198,7 @@ class Directory:
                 self.content[file] = \
                     hash_file(os.path.join(self.full_path, file))
 
-    def update_movie_info(
-            self,
-            tmdb_id=None):
+    def update_movie_info(self, tmdb_id=None):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
@@ -1257,16 +1248,16 @@ class Directory:
                     else:
                         self.movie_release_year = None
                     return True
-                except KeyError as ke:
+                except KeyError:
                     return False
-                except TypeError as te:
+                except TypeError:
                     return False
             else:
                 log.error('Nothing found')
                 return False
 
 
-        def get_info_from_search():
+        def search_by_title():
             search_data = search_tmdb_by_title(self.movie_title, args.mediatype)
 
             if search_data is None or search_data['total_results'] == 0:
@@ -1333,13 +1324,13 @@ class Directory:
         if tmdb_id is not None:
             if get_info_from_details():
                 return True
+
         if get_info_from_directory():
-            if get_info_from_search():
+            if search_by_title():
                 return True
         else:
             return False
 
-        return get_info_from_directory()
 
     def save_directory(self, save_path):
         self.content = None
@@ -1371,6 +1362,9 @@ def handle_directory(folder):
                     directory = Directory(folder, tmdb_id=args.tmdbid)
                 else:
                     directory = Directory(folder)
+
+            if directory.tmdb_id is None:
+                sys.exit()
 
             extra_config = ExtraSettings(os.path.join(extra_configs_directory, config))
 
@@ -1489,32 +1483,6 @@ def handle_directory(folder):
             sys.exit()
 
 
-def handle_library(library):
-    if args.replace:
-        log.error('the replace mode is unable in library mode, please use the directory mode.')
-        return False
-    for folder in os.listdir(library):
-        if folder.startswith('.'):
-            continue
-        if not os.path.isdir(os.path.join(library, folder)):
-            continue
-        try:
-            handle_directory(os.path.join(library, folder))
-        except KeyboardInterrupt:
-            raise
-        except Exception as e:
-
-            log.error('--------------------AN ERROR OCCURRED---------------------')
-            log.error('------------------------SKIPPING--------------------------')
-            log.error('------PLEASE REPORT MOVIE TITLE TO THE GITHUB ISSUES------')
-            log.error('-----------------THE SCRIPT WILL CONTINUE-----------------')
-            log.error('-------------------- Exception: --------------------------')
-            log.error(e)
-            log.error(traceback.format_exc())
-            time.sleep(1)
-            sys.exit(1)
-
-    return True
 
 
 default_config = configparser.ConfigParser()
@@ -1539,11 +1507,9 @@ if not args.mediatype:
 
 if args.directory:
     handle_directory(args.directory)
-elif args.library:
-    handle_library(args.library)
 else:
     log.error(
-        'please specify a directory (-d) or a library (-l) to search extras for')
+        'please specify a directory (-d) to search extras for')
 
 try:
     shutil.rmtree(tmp_folder_root, ignore_errors=True)
