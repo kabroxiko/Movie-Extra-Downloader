@@ -282,7 +282,7 @@ def hash_file(file_path):
 def retrieve_web_page(url, page_name='page'):
 
     response = None
-    log.info('Downloading %s', page_name + '.')
+    log.info('Browsing %s.', page_name)
 
     for tries in range(1, 10):
         try:
@@ -290,7 +290,7 @@ def retrieve_web_page(url, page_name='page'):
             break
         except UnicodeEncodeError as e:
 
-            log.error('Failed to download %s : %s. Skipping.', page_name, str(e))
+            log.error('Failed to download %s : %s. Skipping.', page_name, e)
             break
         except timeout:
 
@@ -299,11 +299,11 @@ def retrieve_web_page(url, page_name='page'):
                 break
 
             time.sleep(1)
-            log.error('Failed to download %s : %s : timed out. Retrying.', page_name, str(e))
+            log.error('Failed to download %s : %s : timed out. Retrying.', page_name, e)
 
         except HTTPError as e:
 
-            log.error('Failed to download %s : %s. Skipping.', page_name, str(e))
+            log.error('Failed to download %s : %s. Skipping.', page_name, e)
             break
         except URLError:
 
@@ -317,22 +317,24 @@ def retrieve_web_page(url, page_name='page'):
     return response
 
 
-def tmdb_search(
+def search_tmdb_by_id(
         tmdb_id,
         extra_type,
         limit,):
     ret_url_list = []
     url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' \
-        + str(tmdb_id) + '/videos' + '?api_key=' + tmdb_api_key \
+        + str(tmdb_id) + '/videos' \
+        + '?api_key=' + tmdb_api_key \
         + '&language=en-US'
-    log.debug('url: %s', url)
+    log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb movie videos')
-    if response is None:
-        return None
     data = json.loads(response.read().decode('utf-8'))
+    if len(data['results']) == 0:
+        log.error('No videos found')
+        return None
     response.close()
 
-    log.debug('details_data: %s', str(data))
+    log.debug('details_data: %s', data)
     log.debug('Search for: %s', extra_type)
     for data in data['results']:
         log.debug('Found: type=%s key=%s', data['type'], data['key'])
@@ -349,16 +351,17 @@ def tmdb_search(
     return ret_url_list[:limit]
 
 
-def get_tmdb_search_data(title, mediatype):
+def search_tmdb_by_title(title, mediatype):
     url = 'https://api.themoviedb.org/3/search/' + mediatype \
-        + '?api_key=' + tmdb_api_key + '&query=' \
-        + quote(title.encode('utf-8')) \
+        + '?api_key=' + tmdb_api_key \
+        + '&query=' + quote(title.encode('utf-8')) \
         + '&language=en-US&page=1&include_adult=false'
-    log.debug('url: %s', url)
+    log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb movie search page')
-    if response is None:
-        return None
     data = json.loads(response.read().decode('utf-8'))
+    if data['total_results'] == 0:
+        log.error('Nothing found')
+        return None
     response.close()
 
     return data
@@ -473,10 +476,7 @@ class ExtraFinder:
             limit = int(search['limit'])
 
             if self.directory.tmdb_id:
-                log.debug('tmdb_api_key: %s',
-                          str(tmdb_api_key))
-                urls = tmdb_search(self.directory.tmdb_id,
-                                   self.config.extra_type, 100)
+                urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_type, 100)
                 log.debug('urls= %s', urls)
             else:
                 log.error('tmdb_id is missing')
@@ -507,7 +507,7 @@ class ExtraFinder:
             info = 'Video "' + youtube_video['webpage_url'] \
                 + '" was removed. reasons: '
             append_video = True
-            log.info('duration: %s', str(youtube_video['duration']))
+            log.info('duration: %s', youtube_video['duration'])
 
             if youtube_video['duration'] >= 200:
                 info += 'long video, '
@@ -1122,8 +1122,9 @@ def download_extra(directory, config, tmp_folder):
                     youtube_video['format'],
                     str(youtube_video['adjusted_rating']))
         for youtube_video in finder.play_trailers:
-            log.info('play trailer: ' + youtube_video['webpage_url']
-                     + ' : ' + youtube_video['format'])
+            log.info('play trailer: %s : %s',
+                    youtube_video['webpage_url'],
+                    youtube_video['format'])
         log.info('downloading for: %s', directory.name)
         count = 0
         tmp_folder = os.path.join(tmp_folder, 'tmp_0')
@@ -1162,13 +1163,7 @@ def download_extra(directory, config, tmp_folder):
 
 class Directory:
 
-    def __init__(
-            self,
-            full_path,
-            tmdb_id=None,
-            json_dict=None,):
-
-        # #######################################
+    def __init__(self, full_path, tmdb_id=None, json_dict=None):
 
         self.name = None
         self.full_path = None
@@ -1191,32 +1186,26 @@ class Directory:
         self.record = []
         self.completed_configs = []
 
-        # #######################################
-
         if full_path is None:
             for (key, value) in json_dict.items():
                 setattr(self, key, value)
         else:
-            self.update_all(full_path=full_path,
-                            tmdb_id=tmdb_id)
+            self.update_all(full_path=full_path, tmdb_id=tmdb_id)
 
     @classmethod
     def load_directory(cls, file):
         with open(file, 'r', 'utf-8') as load_file:
             return Directory(None, json_dict=json.load(load_file))
 
-    def update_all(
-            self,
-            full_path=None,
-            tmdb_id=None):
+    def update_all(self, full_path=None, tmdb_id=None):
 
         if full_path is not None:
             self.name = os.path.split(full_path)[1]
             self.full_path = full_path
         self.update_content()
-        self.update_movie_info(tmdb_id=tmdb_id)
-        if tmdb_api_key is not None:
-            self.update_similar_results()
+        self.update_movie_info(tmdb_id)
+        if self.update_similar_results() is False:
+            return False
 
     def update_content(self):
 
@@ -1266,18 +1255,19 @@ class Directory:
             url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' + str(tmdb_id) + \
                                             '?api_key=' + tmdb_api_key + \
                                             '&language=en-US'
-            log.debug('url: %s', url)
+            log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
             response = retrieve_web_page(url, 'movie details')
-            if response is None:
-                return None
             data = json.loads(response.read().decode('utf-8'))
+            if data['total_results'] == 0:
+                log.error('Nothing found')
+                return None
             response.close()
 
             return data
 
         def get_info_from_details():
             details_data = get_tmdb_details_data(tmdb_id)
-            log.debug('details_data: %s', str(details_data))
+            log.debug('details_data: %s', details_data)
             if details_data is not None:
                 try:
                     self.tmdb_id = details_data['id']
@@ -1303,7 +1293,7 @@ class Directory:
                 return False
 
         def get_info_from_search():
-            search_data = get_tmdb_search_data(self.movie_title, args.mediatype)
+            search_data = search_tmdb_by_title(self.movie_title, args.mediatype)
 
             if search_data is None or search_data['total_results'] == 0:
                 return False
@@ -1382,15 +1372,14 @@ class Directory:
                     self.movie_release_year = None
             return True
 
-        if tmdb_api_key is not None:
-            if tmdb_id is not None:
-                if get_info_from_details():
-                    return True
-            if get_info_from_directory():
-                if get_info_from_search():
-                    return True
-            else:
-                return False
+        if tmdb_id is not None:
+            if get_info_from_details():
+                return True
+        if get_info_from_directory():
+            if get_info_from_search():
+                return True
+        else:
+            return False
 
         return get_info_from_directory()
 
@@ -1434,10 +1423,10 @@ class Directory:
                     result = similar_movies_data
                 return result
 
-            search_data = get_tmdb_search_data(self.movie_title, args.mediatype)
+            search_data = search_tmdb_by_title(self.movie_title, args.mediatype)
 
             if search_data is None or search_data['total_results'] == 0:
-                return []
+                return None
 
             ret = find_by_tmdb_id()
             if ret is not None:
@@ -1455,24 +1444,18 @@ class Directory:
         def process_similar_results():
             self.banned_title_keywords = []
             self.banned_years = []
-
             for similar_movie in similar_movies:
 
                 if args.mediatype == 'movie':
-                    for word in get_keyword_list(similar_movie['title'
-                                                               ]):
-
+                    for word in get_keyword_list(similar_movie['title']):
                         if word.lower() not in self.movie_title.lower() \
                                 and word.lower() \
                                 not in self.banned_title_keywords:
-
                             if self.movie_original_title is not None:
-
                                 if word.lower() \
                                         not in self.movie_original_title.lower():
                                     self.banned_title_keywords.append(word)
                             else:
-
                                 self.banned_title_keywords.append(word)
                     try:
                         if len((similar_movie['release_date'])[:4]) \
@@ -1488,10 +1471,13 @@ class Directory:
                     except KeyError as e:
                         pass
 
-        similar_movies = find_similar_results()
-        if similar_movies is not None:
+        if self.tmdb_id is None:
+            log.debug('Finding Similar results in tmdb')
+            similar_movies = find_similar_results()
+            if similar_movies is None:
+                return False
             process_similar_results()
-            return True
+
 
     def save_directory(self, save_path):
         self.content = None
@@ -1503,7 +1489,7 @@ class Directory:
 
 
 def handle_directory(folder):
-    log.info('working on directory: " %s', folder + '"')
+    log.info('working on directory: %s', folder)
     for config in configs_content:
 
         if config.startswith('.') or config.startswith('_'):
@@ -1515,19 +1501,16 @@ def handle_directory(folder):
                         os.path.join(records, os.path.split(folder)[1]))
                 else:
                     if has_tmdb_key:
-                        directory = Directory(folder,
-                                              tmdb_id=args.tmdbid)
+                        directory = Directory(folder, tmdb_id=args.tmdbid)
                     else:
                         directory = Directory(folder)
             except FileNotFoundError:
                 if has_tmdb_key:
-                    directory = Directory(folder,
-                                          tmdb_id=args.tmdbid)
+                    directory = Directory(folder, tmdb_id=args.tmdbid)
                 else:
                     directory = Directory(folder)
 
-            extra_config = ExtraSettings(os.path.join(extra_configs_directory,
-                                                      config))
+            extra_config = ExtraSettings(os.path.join(extra_configs_directory, config))
 
             if args.replace and 'trailer' in extra_config.extra_type.lower():
                 args.force = True
@@ -1616,16 +1599,15 @@ def handle_directory(folder):
             directory.save_directory(records)
 
             if args.force:
-                log.debug('record: %s', str(directory.record))
+                log.debug('record: %s', directory.record)
 
         except FileNotFoundError as e:
 
-            log.error('file not found: %s', str(e))
+            log.error('file not found: %s', e)
             continue
         except HTTPError:
 
-            log.error(
-                'You might have been flagged by google search. try again tomorrow.')
+            log.error('You might have been flagged by google search. try again tomorrow.')
             sys.exit()
         except URLError:
 
@@ -1647,8 +1629,7 @@ def handle_directory(folder):
 
 def handle_library(library):
     if args.replace:
-        log.error(
-            'the replace mode is unable in library mode, please use the directory mode.')
+        log.error('the replace mode is unable in library mode, please use the directory mode.')
         return False
     for folder in os.listdir(library):
         if folder.startswith('.'):
@@ -1661,16 +1642,11 @@ def handle_library(library):
             raise
         except Exception as e:
 
-            log.error(
-                '--------------------AN ERROR OCCURRED---------------------')
-            log.error(
-                '------------------------SKIPPING--------------------------')
-            log.error(
-                '------PLEASE REPORT MOVIE TITLE TO THE GITHUB ISSUES------')
-            log.error(
-                '-----------------THE SCRIPT WILL CONTINUE-----------------')
-            log.error(
-                '-------------------- Exception: --------------------------')
+            log.error('--------------------AN ERROR OCCURRED---------------------')
+            log.error('------------------------SKIPPING--------------------------')
+            log.error('------PLEASE REPORT MOVIE TITLE TO THE GITHUB ISSUES------')
+            log.error('-----------------THE SCRIPT WILL CONTINUE-----------------')
+            log.error('-------------------- Exception: --------------------------')
             log.error(e)
             log.error(traceback.format_exc())
             time.sleep(1)
@@ -1692,8 +1668,8 @@ configs_content = os.listdir(extra_configs_directory)
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
 tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
-result = get_tmdb_search_data('star wars', 'movie')
-if result is None:
+test_tmdb_key = search_tmdb_by_title('star wars', 'movie')
+if test_tmdb_key is None:
     log.error('Warning: No working TMDB api key was specified.')
     time.sleep(10)
     has_tmdb_key = False
