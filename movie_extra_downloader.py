@@ -1099,7 +1099,7 @@ class Directory:
 
     @classmethod
     def load_directory(cls, file):
-        with open(file, 'r', 'utf-8') as load_file:
+        with open(file + ".json", 'r', 'utf-8') as load_file:
             return Directory(None, json_dict=json.load(load_file))
 
     def update_all(self, full_path=None, tmdb_id=None):
@@ -1268,8 +1268,8 @@ class Directory:
         self.subdirectories = None
         if not os.path.isdir(save_path):
             os.mkdir(os.path.join(save_path))
-        with open(os.path.join(save_path, self.name), 'w') as save_file:
-            json.dump(self.__dict__, save_file)
+        with open(os.path.join(save_path, self.name + ".json"), 'w') as save_file:
+            json.dump(self.__dict__, save_file, indent = 4)
 
 
 def handle_directory(folder):
