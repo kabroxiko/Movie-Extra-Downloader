@@ -1453,10 +1453,10 @@ def handle_directory(folder):
                 os.mkdir(os.path.join(directory.full_path,
                          extra_config.extra_type))
 
-            if not os.path.isdir(tmp_folder):
-                os.mkdir(tmp_folder)
+            if not os.path.isdir(tmp_folder_root):
+                os.mkdir(tmp_folder_root)
 
-            download_extra(directory, extra_config, tmp_folder)
+            download_extra(directory, extra_config, tmp_folder_root)
             directory.completed_configs.append(extra_config.config_id)
             directory.save_directory(records)
 
@@ -1519,7 +1519,7 @@ def handle_library(library):
 
 default_config = configparser.ConfigParser()
 default_config.read(os.path.join(os.path.dirname(sys.argv[0]),'default_config.cfg'))
-tmp_folder = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
+tmp_folder_root = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
 extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]),'extra_configs')
 configs_content = os.listdir(extra_configs_directory)
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
@@ -1546,9 +1546,9 @@ else:
         'please specify a directory (-d) or a library (-l) to search extras for')
 
 try:
-    shutil.rmtree(tmp_folder, ignore_errors=True)
+    shutil.rmtree(tmp_folder_root, ignore_errors=True)
 except FileNotFoundError:
     pass
-os.mkdir(tmp_folder)
+os.mkdir(tmp_folder_root)
 
 sys.exit()
