@@ -245,8 +245,7 @@ def get_clean_string(string):
         if len(ret_tup[ret_tup_count]) == 1 \
                 and len(ret_tup[ret_tup_count + 1]) == 1:
             ret_count += 1
-            ret = ret[:ret_count] + ret[ret_count:ret_count +
-                                        1].replace(' ', '.') + ret[ret_count + 1:]
+            ret = ret[:ret_count] + ret[ret_count:ret_count + 1].replace(' ', '.') + ret[ret_count + 1:]
             ret_count += 1
         else:
             ret_count += len(ret_tup[ret_tup_count]) + 1
@@ -329,10 +328,10 @@ def search_tmdb_by_id(
     log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb movie videos')
     data = json.loads(response.read().decode('utf-8'))
+    response.close()
     if len(data['results']) == 0:
         log.error('No videos found')
         return None
-    response.close()
 
     log.debug('details_data: %s', data)
     log.debug('Search for: %s', extra_type)
@@ -359,9 +358,6 @@ def search_tmdb_by_title(title, mediatype):
     log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb movie search page')
     data = json.loads(response.read().decode('utf-8'))
-    if data['total_results'] == 0:
-        log.error('Nothing found')
-        return None
     response.close()
 
     return data
@@ -449,8 +445,7 @@ class ExtraFinder:
                 ]
 
                 youtube_video['resolution'] = \
-                    resolutions[bisect(resolutions, resolution * 1.2)
-                                - 1]
+                    resolutions[bisect(resolutions, resolution * 1.2) - 1]
 
             if youtube_video['upload_date']:
                 if youtube_video['upload_date'] is not None:
@@ -533,8 +528,7 @@ class ExtraFinder:
                         break
             except TypeError:
                 append_video = False
-                info += \
-                    'unable to confirm year not in (tag:TypeError), '
+                info += 'unable to confirm year not in (tag:TypeError), '
 
             buffer = 0
             if len(self.directory.banned_title_keywords) > 3:
@@ -638,8 +632,7 @@ class ExtraFinder:
                     buffer -= 1
                     if buffer < 0:
                         append_video = False
-                        info += \
-                            'containing banned similar title keywords, '
+                        info += 'containing banned similar title keywords, '
                         break
 
             title_in_video = False
@@ -652,8 +645,7 @@ class ExtraFinder:
                 buffer = 2
 
             for keyword in self.directory.movie_title_keywords:
-                if keyword.lower() not in youtube_video['title'
-                                                        ].lower():
+                if keyword.lower() not in youtube_video['title'].lower():
                     buffer -= 1
                     if buffer < 0:
                         break
@@ -667,8 +659,7 @@ class ExtraFinder:
 
                 for keyword in \
                         self.directory.movie_original_title_keywords:
-                    if keyword.lower() not in youtube_video['title'
-                                                            ].lower():
+                    if keyword.lower() not in youtube_video['title'].lower():
                         buffer -= 1
                         if buffer < 0:
                             break
@@ -817,7 +808,6 @@ class ExtraFinder:
                 not_preferred_channels.append(youtube_video)
 
         self.youtube_videos = preferred_videos + not_preferred_channels
-
         self.play_trailers = sorted(self.play_trailers, key=lambda x:
                                     x['view_count'], reverse=True)
 
@@ -959,14 +949,11 @@ class ExtraFinder:
             else:
                 copy_file()
 
-                if self.config.extra_type \
-                        in self.directory.subdirectories:
-
+                if self.config.extra_type in self.directory.subdirectories:
                     self.directory.subdirectories[self.config.extra_type][file] = \
                         file_hash
                 else:
-                    self.directory.subdirectories = \
-                        {self.config.extra_type: {file: file_hash}}
+                    self.directory.subdirectories = {self.config.extra_type: {file: file_hash}}
 
                 record_file()
 
@@ -994,8 +981,7 @@ class ExtraSettings:
 
         self.custom_filters = self.get_custom_filters()
         self.last_resort_policy = \
-            self.config['DOWNLOADING_AND_POSTPROCESSING'
-                        ].get('last_resort_policy')
+            self.config['DOWNLOADING_AND_POSTPROCESSING'].get('last_resort_policy')
 
         self.priority_order = self.config['PRIORITY_RULES'].get('order')
         self.preferred_channels = make_list_from_string(
@@ -1004,26 +990,21 @@ class ExtraSettings:
                 '\n', ''))
 
         self.videos_to_download = \
-            self.config['DOWNLOADING_AND_POSTPROCESSING'
-                        ].getint('videos_to_download', 1)
+            self.config['DOWNLOADING_AND_POSTPROCESSING'].getint('videos_to_download', 1)
         self.naming_scheme = \
-            self.config['DOWNLOADING_AND_POSTPROCESSING'
-                        ].get('naming_scheme')
+            self.config['DOWNLOADING_AND_POSTPROCESSING'].get('naming_scheme')
         self.youtube_dl_arguments = \
-            json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'
-                                   ].get('youtube_dl_arguments'))
+            json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'].get('youtube_dl_arguments'))
 
         self.disable_play_trailers = self.config['EXTRA_CONFIG'].getboolean(
             'disable_play_trailers', False)
         self.only_play_trailers = self.config['EXTRA_CONFIG'].getboolean(
             'only_play_trailers', False)
         self.skip_movies_with_existing_trailers = \
-            self.config['EXTRA_CONFIG'
-                        ].getboolean('skip_movies_with_existing_trailers', False)
+            self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_trailers', False)
 
         self.skip_movies_with_existing_theme = \
-            self.config['EXTRA_CONFIG'
-                        ].getboolean('skip_movies_with_existing_theme',
+            self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_theme',
                                      False)
 
     def get_searches(self):
@@ -1204,8 +1185,7 @@ class Directory:
             self.full_path = full_path
         self.update_content()
         self.update_movie_info(tmdb_id)
-        if self.update_similar_results() is False:
-            return False
+
 
     def update_content(self):
 
@@ -1258,30 +1238,22 @@ class Directory:
             log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
             response = retrieve_web_page(url, 'movie details')
             data = json.loads(response.read().decode('utf-8'))
-            if data['total_results'] == 0:
-                log.error('Nothing found')
-                return None
             response.close()
 
             return data
 
         def get_info_from_details():
             details_data = get_tmdb_details_data(tmdb_id)
-            log.debug('details_data: %s', details_data)
             if details_data is not None:
                 try:
                     self.tmdb_id = details_data['id']
                     self.movie_title = details_data['title']
-                    self.movie_original_title = \
-                        details_data['original_title']
-                    self.movie_title_keywords = \
-                        get_keyword_list(details_data['title'])
-                    self.movie_original_title_keywords = \
-                        get_keyword_list(details_data['original_title'])
+                    self.movie_original_title = details_data['original_title']
+                    self.movie_title_keywords = get_keyword_list(details_data['title'])
+                    self.movie_original_title_keywords = get_keyword_list(details_data['original_title'])
 
                     if len((details_data['release_date'])[:4]) == 4:
-                        self.movie_release_year = \
-                            int((details_data['release_date'])[:4])
+                        self.movie_release_year = int((details_data['release_date'])[:4])
                     else:
                         self.movie_release_year = None
                     return True
@@ -1290,12 +1262,15 @@ class Directory:
                 except TypeError as te:
                     return False
             else:
+                log.error('Nothing found')
                 return False
+
 
         def get_info_from_search():
             search_data = search_tmdb_by_title(self.movie_title, args.mediatype)
 
             if search_data is None or search_data['total_results'] == 0:
+                log.error('Nothing foung by title')
                 return False
 
             movie_data = None
@@ -1314,28 +1289,18 @@ class Directory:
                         data['release_date'] = '000000000000000'
                         continue
                     if movie_data is None:
-                        if str(self.movie_release_year) \
-                                == (data['release_date'])[:4]:
+                        if str(self.movie_release_year) == (data['release_date'])[:4]:
                             movie_data = data
-                        elif (data['release_date'])[6:8] in ['09',
-                                                               '10', '11', '12'] \
-                                and str(self.movie_release_year - 1) \
-                                == (data['release_date'])[:4]:
-
+                        elif (data['release_date'])[6:8] in ['09', '10', '11', '12'] \
+                                and str(self.movie_release_year - 1) == (data['release_date'])[:4]:
                             movie_data = data
-                        elif (data['release_date'])[6:8] in ['01',
-                                                               '02', '03', '04'] \
-                                and str(self.movie_release_year + 1) \
-                                == (data['release_date'])[:4]:
-
+                        elif (data['release_date'])[6:8] in ['01', '02', '03', '04'] \
+                                and str(self.movie_release_year + 1) == (data['release_date'])[:4]:
                             movie_data = data
                     elif movie_backup_data is None:
-                        if str(self.movie_release_year - 1) \
-                                == (data['release_date'])[:4]:
+                        if str(self.movie_release_year - 1) == (data['release_date'])[:4]:
                             movie_backup_data = data
-                        elif str(self.movie_release_year + 1) \
-                                == (data['release_date'])[:4]:
-
+                        elif str(self.movie_release_year + 1) == (data['release_date'])[:4]:
                             movie_backup_data = data
 
                 if movie_data is None and movie_backup_data is not None:
@@ -1348,26 +1313,19 @@ class Directory:
             self.tmdb_id = movie_data['id']
             if args.mediatype == 'movie':
                 self.movie_title = get_clean_string(movie_data['title'])
-                self.movie_original_title = \
-                    get_clean_string(movie_data['original_title'])
-                self.movie_title_keywords = \
-                    get_keyword_list(movie_data['title'])
-                self.movie_original_title_keywords = \
-                    get_keyword_list(movie_data['original_title'])
+                self.movie_original_title = get_clean_string(movie_data['original_title'])
+                self.movie_title_keywords = get_keyword_list(movie_data['title'])
+                self.movie_original_title_keywords = get_keyword_list(movie_data['original_title'])
                 if len((movie_data['release_date'])[:4]) == 4:
-                    self.movie_release_year = \
-                        int((movie_data['release_date'])[:4])
+                    self.movie_release_year = int((movie_data['release_date'])[:4])
                 else:
                     self.movie_release_year = None
             else:
                 self.movie_title = get_clean_string(movie_data['name'])
-                self.movie_original_title = \
-                    get_clean_string(movie_data['original_name'])
-                self.movie_title_keywords = \
-                    get_keyword_list(movie_data['name'])
+                self.movie_original_title = get_clean_string(movie_data['original_name'])
+                self.movie_title_keywords = get_keyword_list(movie_data['name'])
                 if len((movie_data['first_air_date'])[:4]) == 4:
-                    self.movie_release_year = \
-                        int((movie_data['first_air_date'])[:4])
+                    self.movie_release_year = int((movie_data['first_air_date'])[:4])
                 else:
                     self.movie_release_year = None
             return True
@@ -1382,102 +1340,6 @@ class Directory:
             return False
 
         return get_info_from_directory()
-
-    def update_similar_results(self):
-
-        def find_similar_results():
-
-            def find_by_tmdb_id():
-                similar_movies_data = []
-                for data in search_data['results']:
-                    if self.tmdb_id != data['id']:
-                        similar_movies_data.append(data)
-                return similar_movies_data
-
-            def find_by_release_year():
-                similar_movies_data = []
-                movie_found = False
-                backup_found = False
-                result = None
-
-                for data in search_data['results']:
-                    log.info('find_by_release_year: release_date=%s', data['release_date'])
-
-                    if not movie_found and str(self.movie_release_year) \
-                            == (data['release_date'])[:4]:
-                        movie_found = True
-                        continue
-
-                    if not backup_found:
-                        if data['release_date'][6:8] in ['09', '10', '11', '12'] \
-                                and str(self.movie_release_year - 1) == data['release_date'][:4]:
-                            backup_found = True
-                        elif data['release_date'][6:8] in ['01', '02', '03'] \
-                                and str(self.movie_release_year + 1) == data['release_date'][:4]:
-                            backup_found = True
-
-                    if len(similar_movies_data) < 5:
-                        similar_movies_data.append(data)
-
-                if movie_found or backup_found:
-                    result = similar_movies_data
-                return result
-
-            search_data = search_tmdb_by_title(self.movie_title, args.mediatype)
-
-            if search_data is None or search_data['total_results'] == 0:
-                return None
-
-            ret = find_by_tmdb_id()
-            if ret is not None:
-                return ret[:5]
-
-            if self.movie_release_year is None:
-                return (search_data['results'])[1:6]
-
-            ret = find_by_release_year()
-            if ret is not None:
-                return ret[:5]
-
-            return None
-
-        def process_similar_results():
-            self.banned_title_keywords = []
-            self.banned_years = []
-            for similar_movie in similar_movies:
-
-                if args.mediatype == 'movie':
-                    for word in get_keyword_list(similar_movie['title']):
-                        if word.lower() not in self.movie_title.lower() \
-                                and word.lower() \
-                                not in self.banned_title_keywords:
-                            if self.movie_original_title is not None:
-                                if word.lower() \
-                                        not in self.movie_original_title.lower():
-                                    self.banned_title_keywords.append(word)
-                            else:
-                                self.banned_title_keywords.append(word)
-                    try:
-                        if len((similar_movie['release_date'])[:4]) \
-                            == 4 and int((similar_movie['release_date'
-                                                        ])[:4]) \
-                            not in [self.movie_release_year] \
-                            + self.banned_years \
-                            and (similar_movie['release_date'])[:4] \
-                                not in self.movie_title:
-
-                            self.banned_years.append(
-                                int((similar_movie['release_date'])[:4]))
-                    except KeyError as e:
-                        pass
-
-        if self.tmdb_id is None:
-            log.debug('Finding Similar results in tmdb')
-            similar_movies = find_similar_results()
-            if similar_movies is None:
-                return False
-            process_similar_results()
-
 
     def save_directory(self, save_path):
         self.content = None
@@ -1656,20 +1518,15 @@ def handle_library(library):
 
 
 default_config = configparser.ConfigParser()
-default_config.read(os.path.join(os.path.dirname(sys.argv[0]),
-                    'default_config.cfg'))
-
+default_config.read(os.path.join(os.path.dirname(sys.argv[0]),'default_config.cfg'))
 tmp_folder = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
-
-extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]),
-                                       'extra_configs')
+extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]),'extra_configs')
 configs_content = os.listdir(extra_configs_directory)
-
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
 tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
-test_tmdb_key = search_tmdb_by_title('star wars', 'movie')
-if test_tmdb_key is None:
+test_result = search_tmdb_by_title('star wars', 'movie')
+if test_result is None:
     log.error('Warning: No working TMDB api key was specified.')
     time.sleep(10)
     has_tmdb_key = False
