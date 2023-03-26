@@ -85,33 +85,20 @@ def apply_query_template(template, keys):
 def replace_roman_numbers(string):
     ret = ' ' + string.lower() + ' '
 
-    ret = ret.replace(
-        ' ix ',
-        ' 9 ').replace(
-        ' viiii ',
-        ' 9 ').replace(
-        ' viii ',
-        ' 8 ').replace(
-        ' vii ',
-        ' 7 ').replace(
-        ' vi ',
-        ' 6 ').replace(
-        ' iv ',
-        ' 4 ').replace(
-        ' iiii ',
-        ' 4 ').replace(
-        ' iii ',
-        ' 3 ').replace(
-        ' ii ',
-        ' 2 ').replace(
-        ' trailer 4 ',
-        ' trailer ').replace(
-        ' trailer 3 ',
-        ' trailer ').replace(
-        ' trailer 2 ',
-        ' trailer ').replace(
-        ' trailer 1 ',
-        ' trailer ')
+    ret = (ret.replace(' ix ', '')
+              .replace(' viiii ', '')
+              .replace(' viii ', '')
+              .replace(' vii ', '')
+              .replace(' vi ', '')
+              .replace(' iv ', '')
+              .replace(' iiii ', '')
+              .replace(' iii ', '')
+              .replace(' ii ', '')
+              .replace(' trailer 4 ', '')
+              .replace(' trailer 3 ', '')
+              .replace(' trailer 2 ', '')
+              .replace(' trailer 1 ', ''))
+
 
     return space_cleanup(ret)
 
@@ -119,57 +106,32 @@ def replace_roman_numbers(string):
 def get_keyword_list(string):
 
     ret = ' ' + get_clean_string(string).lower() + ' '
-    ret = ret.replace(
-        ' the ',
-        ' ').replace(
-        ' in ',
-        ' ').replace(
-        ' a ',
-        ' ').replace(
-        ' by ',
-        ' ').replace(
-        ' for ',
-        ' ').replace(
-        ' is ',
-        ' ').replace(
-        ' am ',
-        ' ').replace(
-        ' an ',
-        ' ').replace(
-        ' in ',
-        ' ').replace(
-        ' with ',
-        ' ').replace(
-        ' from ',
-        ' ').replace(
-        ' and ',
-        ' ').replace(
-        ' movie ',
-        ' ').replace(
-        ' trailer ',
-        ' ').replace(
-        ' interview ',
-        ' ').replace(
-        ' interviews ',
-        ' ').replace(
-        ' scenes ',
-        ' ').replace(
-        ' scene ',
-        ' ').replace(
-        ' official ',
-        ' ').replace(
-        ' hd ',
-        ' ').replace(
-        ' hq ',
-        ' ').replace(
-        ' lq ',
-        ' ').replace(
-        ' 1080p ',
-        ' ').replace(
-        ' 720p ',
-        ' ').replace(
-        ' of ',
-        ' ')
+    ret = (ret.replace(' the ', '')
+              .replace(' in ', '')
+              .replace(' a ', '')
+              .replace(' by ', '')
+              .replace(' for ', '')
+              .replace(' is ', '')
+              .replace(' am ', '')
+              .replace(' an ', '')
+              .replace(' in ', '')
+              .replace(' with ', '')
+              .replace(' from ', '')
+              .replace(' and ', '')
+              .replace(' movie ', '')
+              .replace(' trailer ', '')
+              .replace(' interview ', '')
+              .replace(' interviews ', '')
+              .replace(' scenes ', '')
+              .replace(' scene ', '')
+              .replace(' official ', '')
+              .replace(' hd ', '')
+              .replace(' hq ', '')
+              .replace(' lq ', '')
+              .replace(' 1080p ', '')
+              .replace(' 720p ', '')
+              .replace(' of ', ''))
+
 
     return list(set(space_cleanup(ret).split(' ')))
 
@@ -177,57 +139,32 @@ def get_keyword_list(string):
 def get_clean_string(string):
     ret = ' ' + string.lower() + ' '
 
-    ret = ret.replace(
-        '(',
-        '').replace(
-        ')',
-        '').replace(
-        '[',
-        '').replace(
-        ']',
-        '').replace(
-        '{',
-        '').replace(
-        '}',
-        '').replace(
-        ':',
-        '').replace(
-        ';',
-        '').replace(
-        '?',
-        '').replace(
-        "'",
-        '').replace(
-        '\xe2\x80\x99',
-        '').replace(
-        '\xc2\xb4',
-        '').replace(
-        '`',
-        '').replace(
-        '*',
-        ' ').replace(
-        '.',
-        ' ').replace(
-        '\xc2\xb7',
-        '-').replace(
-        ' -',
-        ' ').replace(
-        '- ',
-        ' ').replace(
-        '_',
-        ' ').replace(
-        ' + ',
-        ' : ').replace(
-        '+',
-        '/').replace(
-        ' : ',
-        ' + ').replace(
-        '/ ',
-        ' ').replace(
-        ' /',
-        ' ').replace(
-        ' & ',
-        ' ')
+    ret = (ret.replace('(', '')
+              .replace(')', '')
+              .replace('[', '')
+              .replace(']', '')
+              .replace('{', '')
+              .replace('}', '')
+              .replace(':', '')
+              .replace(';', '')
+              .replace('?', '')
+              .replace("'", '')
+              .replace('\xe2\x80\x99', '')
+              .replace('\xc2\xb4', '')
+              .replace('`', '')
+              .replace('*', '')
+              .replace('.', '')
+              .replace('\xc2\xb7', '')
+              .replace(' -', '')
+              .replace('- ', '')
+              .replace('_', '')
+              .replace(' + ', '')
+              .replace('+', '')
+              .replace(' : ', '')
+              .replace('/ ', '')
+              .replace(' /', '')
+              .replace(' & ', ''))
+
 
     ret_tup = ret.split(' ')
     ret_count = 0
