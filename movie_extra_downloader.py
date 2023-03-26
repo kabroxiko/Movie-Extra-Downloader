@@ -24,17 +24,11 @@ import yt_dlp
 from _socket import timeout
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory',
-                    help='directory to search extras for')
-
-parser.add_argument('-t', '--tmdbid',
-                    help='tmdb id to search extras for')
-parser.add_argument('-m', '--mediatype',
-                    help='media type to search extras for')
-parser.add_argument('-f', '--force', action='store_true',
-                    help='force scan the directories')
-parser.add_argument('-r', '--replace', action='store_true',
-                    help='remove and ban the existing extra')
+parser.add_argument('-d', '--directory', help='directory to search extras for')
+parser.add_argument('-t', '--tmdbid', help='tmdb id to search extras for')
+parser.add_argument('-m', '--mediatype', help='media type to search extras for')
+parser.add_argument('-f', '--force', action='store_true', help='force scan the directories')
+parser.add_argument('-r', '--replace', action='store_true', help='remove and ban the existing extra')
 args = parser.parse_args()
 
 if args.directory and os.path.split(args.directory)[1] == '':
