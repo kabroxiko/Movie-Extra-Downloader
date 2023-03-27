@@ -58,8 +58,7 @@ elif 'radarr_eventtype' in os.environ:
     log.info('directory: %s', args.directory)
 
 
-def make_list_from_string(string, delimiter=',',
-                          remove_spaces_next_to_delimiter=True):
+def make_list_from_string(string, delimiter=',', remove_spaces_next_to_delimiter=True):
     if remove_spaces_next_to_delimiter:
         while ' ' + delimiter in string:
             string = string.replace(' ' + delimiter, delimiter)
@@ -195,9 +194,9 @@ def hash_file(file_path):
     response = None
     if not os.path.isdir(file_path):
         md5 = hashlib.md5()
-        with open(file_path, 'rb') as file:
+        with open(file_path, 'rb') as file_name:
             for i in range(10):
-                data = file.read(2 ** 20)
+                data = file_name.read(2 ** 20)
                 if not data:
                     break
                 md5.update(data)
@@ -243,7 +242,7 @@ def retrieve_web_page(url, page_name='page'):
     return response
 
 
-def search_tmdb_by_id(tmdb_id, extra_type, limit):
+def search_tmdb_by_id(tmdb_id, extra_types, limit):
     ret_url_list = []
     url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' \
         + str(tmdb_id) + '/videos' \
@@ -257,19 +256,23 @@ def search_tmdb_by_id(tmdb_id, extra_type, limit):
         log.error('No videos found')
         return None
 
-    log.debug('details_data: %s', data)
-    log.debug('Search for: %s', extra_type)
+    log.debug('Search for: %s', extra_types)
     for data in data['results']:
         log.debug('Found: type=%s key=%s', data['type'], data['key'])
-        if extra_type == 'Behind The Scenes' \
-            and data['type'] == 'Behind the Scenes' or extra_type == 'Featurettes' \
-            and data['type'] == 'Featurette' or extra_type == 'Scenes' \
-            and data['type'] == 'Clip' or extra_type == 'Trailers' \
-            and (data['type'] == 'Trailer' or data['type'] == 'Teaser') \
-            or extra_type == 'Others' \
-            and data['type'] == 'Bloopers':
+        extra_type = None
+        if ('Behind The Scenes' in extra_types and data['type'] == 'Behind the Scenes'):
+            extra_type = 'Behind the Scenes'
+        elif ('Featurettes' in extra_types and data['type'] == 'Featurette'):
+            extra_type = 'Featurettes'
+        elif ('Scenes' in extra_types and data['type'] == 'Clip'):
+            extra_type = 'Scenes'
+        elif ('Trailers' in extra_types and (data['type'] == 'Trailer' or data['type'] == 'Teaser')):
+            extra_type = 'Trailers'
+        elif ('Others' in extra_types and data['type'] == 'Bloopers'):
+            extra_type = 'Others'
 
-            ret_url_list.append('https://www.youtube.com/watch?v=' + data['key'])
+        if extra_type is not None:
+            ret_url_list.append({"extra_type": extra_type, "link": 'https://www.youtube.com/watch?v=' + data['key']})
 
     return ret_url_list[:limit]
 
@@ -311,11 +314,10 @@ class ExtraFinder:
                         with yt_dlp.YoutubeDL({'quiet': True,
                                                'socket_timeout': '3',
                                                'logger': log}) as ydl:
-                            youtube_info = ydl.extract_info(url, download=False)
+                            youtube_info = ydl.extract_info(url['link'], download=False)
                             break
                     except yt_dlp.DownloadError as e:
-                        if 'ERROR: Unable to download webpage:' \
-                                in e.args[0]:
+                        if 'ERROR: Unable to download webpage:' in e.args[0]:
                             if tries > 3:
                                 log.error('hey, there: error!!!')
                                 raise
@@ -329,8 +331,8 @@ class ExtraFinder:
             if not youtube_video:
                 return None
 
-            youtube_video['title'] = \
-                get_clean_string(youtube_video['title'])
+            youtube_video['title'] = get_clean_string(youtube_video['title'])
+            youtube_video['extra_type'] = url['extra_type']
 
             if youtube_video['view_count'] is None:
                 youtube_video['view_count'] = 100
@@ -347,16 +349,13 @@ class ExtraFinder:
             youtube_video['adjusted_rating'] = youtube_video['average_rating'] * \
                 (1 - 1 / (youtube_video['view_count'] / 60) ** 0.5)
 
-            if youtube_video['width'] is None or youtube_video['height'
-                                                               ] is None:
+            if youtube_video['width'] is None or youtube_video['height'] is None:
                 youtube_video['resolution_ratio'] = 1
                 youtube_video['resolution'] = 144
             else:
-                youtube_video['resolution_ratio'] = \
-                    youtube_video['width'] / youtube_video['height']
+                youtube_video['resolution_ratio'] = youtube_video['width'] / youtube_video['height']
 
-                resolution = max(int(youtube_video['height']),
-                                 int(youtube_video['width'] / 16 * 9))
+                resolution = max(int(youtube_video['height']), int(youtube_video['width'] / 16 * 9))
                 resolutions = [
                     144,
                     240,
@@ -368,14 +367,12 @@ class ExtraFinder:
                     2160,
                 ]
 
-                youtube_video['resolution'] = \
-                    resolutions[bisect(resolutions, resolution * 1.2) - 1]
+                youtube_video['resolution'] = resolutions[bisect(resolutions, resolution * 1.2) - 1]
 
             if youtube_video['upload_date']:
                 if youtube_video['upload_date'] is not None:
                     date_str = youtube_video['upload_date']
-                    upload_date = date(int(date_str[:4]),
-                                       int(date_str[4:6]), int(date_str[6:8]))
+                    upload_date = date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]))
                     time_delta = date.today() - upload_date
                     youtube_video['views_per_day'] = youtube_video['view_count'] / \
                         (365 + time_delta.total_seconds() / 60 / 60 / 24)
@@ -385,6 +382,7 @@ class ExtraFinder:
             else:
                 log.error('no "upload_date"!!!')
                 youtube_video['views_per_day'] = 0
+
             return youtube_video
 
         url_list = []
@@ -395,8 +393,8 @@ class ExtraFinder:
             limit = int(search['limit'])
 
             if self.directory.tmdb_id:
-                urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_type, 100)
-                log.debug('urls= %s', urls)
+                urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_types, 100)
+                log.debug('urls: %s', urls)
             else:
                 log.error('tmdb_id is missing')
                 continue
@@ -404,11 +402,11 @@ class ExtraFinder:
             if urls:
                 url_list += urls
 
-        for url in list(set(url_list)):
-            if not any(url in youtube_video['webpage_url']
-                       or youtube_video['webpage_url'] in url
+        for url in url_list:
+            if not any(url['link'] in youtube_video['webpage_url']
+                       or youtube_video['webpage_url'] in url['link']
                        for youtube_video in self.youtube_videos):
-                if 'youtube.com/watch?v=' not in url:
+                if 'youtube.com/watch?v=' not in url['link']:
                     continue
                 video = create_youtube_video()
 
@@ -530,8 +528,7 @@ class ExtraFinder:
 
         for youtube_video in self.play_trailers:
 
-            info = 'Video "' + youtube_video['webpage_url'] \
-                + '" was removed. reasons: '
+            info = 'Video "' + youtube_video['webpage_url'] + '" was removed. reasons: '
             append_video = True
 
             for year in self.directory.banned_years:
@@ -539,8 +536,7 @@ class ExtraFinder:
                     append_video = False
                     info += 'containing banned year in title, '
                     break
-                if any(str(year) in tag.lower() for tag in
-                       youtube_video['tags']):
+                if any(str(year) in tag.lower() for tag in youtube_video['tags']):
                     append_video = False
                     info += 'containing banned year in tags, '
                     break
@@ -694,7 +690,7 @@ class ExtraFinder:
                     filtered_list = highest()
                 if filter_args[1] == 'lowest':
                     filtered_list = lowest()
-            if self.play_trailers and self.config.extra_type \
+            if self.play_trailers and self.config.extra_types \
                     == 'trailers':
                 if len(filtered_list) + 1 >= self.config.break_limit:
                     break
@@ -743,10 +739,9 @@ class ExtraFinder:
         arguments['writesubtitles'] = True
         arguments['quiet'] = True
         arguments['noprogress'] = True
-        arguments['subtitle'] = '--write-sub --sub-lang en --write-auto-sub --sub-format srt'
+        arguments['subtitle'] = '--write-sub --sub-lang es --write-auto-sub --sub-format srt'
         arguments['logger'] = log
         arguments['outtmpl'] = os.path.join(tmp_file, arguments['outtmpl'])
-        log.debug('arguments: %s', arguments)
         for (key, value) in arguments.items():
             if isinstance(value, str):
                 if value.lower() == 'false' or value.lower() == 'no':
@@ -756,22 +751,24 @@ class ExtraFinder:
 
         for youtube_video in self.youtube_videos[:]:
             if not self.config.force:
-                for vid_id in self.directory.record:
-                    if vid_id == youtube_video['id']:
+                for youtube_video_id in self.directory.record:
+                    if youtube_video_id == youtube_video['id']:
                         continue
 
             for tries in range(1, 11):
                 try:
                     with yt_dlp.YoutubeDL(arguments) as ydl:
-                        meta = ydl.extract_info(youtube_video['webpage_url'])
+                        info = ydl.extract_info(youtube_video['webpage_url'])
+                        info["extra_type"] = youtube_video['extra_type']
+                        # info["filename"] = youtube_video['fulltitle'] + '.'+ youtube_video['ext']
+                        meta = ydl.sanitize_info(info)
                         downloaded_videos_meta.append(meta)
                         count += 1
                         break
                 except yt_dlp.DownloadError as e:
 
                     if tries > 3:
-                        if str(e).startswith(
-                                'ERROR: Did not get any data blocks'):
+                        if str(e).startswith('ERROR: Did not get any data blocks'):
                             return None
                         log.error('failed to download the video.')
                         break
@@ -791,34 +788,30 @@ class ExtraFinder:
             shutil.move(source_path, target_path)
 
         def record_file():
-            vid_id = 'unknown'
+            youtube_video_id = 'unknown'
             for meta in downloaded_videos_meta:
-                if meta['title'] + '.' + meta['ext'] == file:
-                    vid_id = meta['id']
+                if meta['title'] + '.' + meta['ext'] == file_name:
+                    youtube_video_id = meta['id']
                     break
 
             self.directory.record.append({
                 'hash': file_hash,
-                'file_path': os.path.join(self.directory.full_path,
-                                          self.config.extra_type, file),
-                'file_name': file,
-                'youtube_video_id': vid_id,
-                'config_type': self.config.extra_type,
+                'file_path': os.path.join(self.directory.full_path, extra_type, file_name),
+                'file_name': file_name,
+                'youtube_video_id': youtube_video_id,
+                'extra_type': extra_type,
             })
 
         def determine_case():
-            for (content_file, content_file_hash) in \
-                    self.directory.content.items():
-                if content_file == file:
+            for (content_file, content_file_hash) in self.directory.content.items():
+                if content_file == file_name:
                     return 'name_in_directory'
-
                 if file_hash == content_file_hash:
                     return 'hash_in_directory'
 
             for sub_content in self.directory.subdirectories.values():
-                for (content_file, content_file_hash) in \
-                        sub_content.items():
-                    if content_file == file:
+                for (content_file, content_file_hash) in sub_content.items():
+                    if content_file == file_name:
                         return 'name_in_directory'
                     if file_hash == content_file_hash:
                         return 'hash_in_directory'
@@ -829,8 +822,7 @@ class ExtraFinder:
             if self.config.force:
                 copy_file()
                 record_file()
-                self.directory.subdirectories[self.config.extra_type][file] = \
-                    file_hash
+                self.directory.subdirectories[extra_type][file_name] = file_hash
             else:
                 os.remove(source_path)
 
@@ -838,29 +830,34 @@ class ExtraFinder:
             if self.config.force:
                 copy_file()
                 record_file()
-                if self.config.extra_type \
-                        in self.directory.subdirectories:
-                    self.directory.subdirectories[self.config.extra_type] = \
-                        {file: file_hash}
+                if self.config.extra_types in self.directory.subdirectories:
+                    self.directory.subdirectories[self.config.extra_types] = {file_name: file_hash}
                 else:
-                    self.directory.subdirectories = \
-                        {self.config.extra_type: {file: file_hash}}
+                    self.directory.subdirectories = {self.config.extra_types: {file_name: file_hash}}
             else:
                 os.remove(source_path)
 
-        for file in os.listdir(tmp_folder):
-            source_path = os.path.join(tmp_folder, file)
-            if self.config.extra_type == 'theme-music':
-                target_path = os.path.join(self.directory.full_path,
-                                           'theme.mp3')
+        for file_name in os.listdir(tmp_folder):
+            log.debug('file_name1: %s', file_name.replace(u'\uff5c',''))
+            # log.debug('downloaded_videos_meta: %s', downloaded_videos_meta)
+            # log.debug('yt_id: %s', downloaded_videos_meta[0]['formats'])
+            for video_meta in downloaded_videos_meta:
+                log.debug('file_name2: %s', video_meta['title'] + '.' + video_meta['ext'])
+                if video_meta['title'] in file_name.replace(u'\uff5c','\u007c').replace(u'\u29f8','\u002f'):
+                    extra_type = video_meta['extra_type']
+                    log.debug('extra_type: %s', extra_type)
+                    continue
+            # log.debug('yt_id: %s', [x for x in downloaded_videos_meta if x['title'] + '.' + x['ext'] == file_name])
+            # log.debug('yt_id: %s', list(filter(lambda x:x["formats"]=="CZ1094", downloaded_videos_meta)))
+            source_path = os.path.join(tmp_folder, file_name)
+            if self.config.extra_types == 'theme-music':
+                target_path = os.path.join(self.directory.full_path, 'theme.mp3')
             else:
-                target_path = os.path.join(self.directory.full_path,
-                                           self.config.extra_type, file)
+                target_path = os.path.join(self.directory.full_path, extra_type, file_name)
 
             file_hash = hash_file(source_path)
 
-            if any(file_hash == record['hash'] for record in
-                   self.directory.record):
+            if any(file_hash == record['hash'] for record in self.directory.record):
                 os.remove(source_path)
                 continue
 
@@ -873,11 +870,10 @@ class ExtraFinder:
             else:
                 copy_file()
 
-                if self.config.extra_type in self.directory.subdirectories:
-                    self.directory.subdirectories[self.config.extra_type][file] = \
-                        file_hash
+                if extra_type in self.directory.subdirectories:
+                    self.directory.subdirectories[extra_type][file_name] = file_hash
                 else:
-                    self.directory.subdirectories = {self.config.extra_type: {file: file_hash}}
+                    self.directory.subdirectories = {extra_type: {file_name: file_hash}}
 
                 record_file()
 
@@ -886,50 +882,35 @@ class ExtraSettings:
 
     def __init__(self, config_path):
 
-        with codecs.open(config_path, 'r') as file:
+        with codecs.open(config_path, 'r') as file_name:
             self.config = configparser.RawConfigParser()
-            self.config.read_file(file)
+            self.config.read_file(file_name)
 
-        self.extra_type = self.config['EXTRA_CONFIG'].get('extra_type')
+        self.extra_types = self.config['EXTRA_CONFIG'].get('extra_types')
         self.config_id = self.config['EXTRA_CONFIG'].get('config_id')
         self.force = self.config['EXTRA_CONFIG'].getboolean('force')
 
         self.searches = self.get_searches()
 
-        self.required_phrases = make_list_from_string(
-            self.config['FILTERING'].get('required_phrases').replace('\n', ''))
-        self.banned_phrases = make_list_from_string(
-            self.config['FILTERING'].get('banned_phrases').replace('\n', ''))
-        self.banned_channels = make_list_from_string(
-            self.config['FILTERING'].get('banned_channels').replace('\n', ''))
+        self.required_phrases = make_list_from_string(self.config['FILTERING'].get('required_phrases').replace('\n', ''))
+        self.banned_phrases = make_list_from_string(self.config['FILTERING'].get('banned_phrases').replace('\n', ''))
+        self.banned_channels = make_list_from_string(self.config['FILTERING'].get('banned_channels').replace('\n', ''))
 
         self.custom_filters = self.get_custom_filters()
-        self.last_resort_policy = \
-            self.config['DOWNLOADING_AND_POSTPROCESSING'].get('last_resort_policy')
+        self.last_resort_policy = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('last_resort_policy')
 
         self.priority_order = self.config['PRIORITY_RULES'].get('order')
-        self.preferred_channels = make_list_from_string(
-            self.config['PRIORITY_RULES'].get(
-                'preferred_channels', '').replace(
-                '\n', ''))
+        self.preferred_channels = make_list_from_string(self.config['PRIORITY_RULES'].get('preferred_channels', '').replace('\n', ''))
 
-        self.videos_to_download = \
-            self.config['DOWNLOADING_AND_POSTPROCESSING'].getint('videos_to_download', 1)
-        self.naming_scheme = \
-            self.config['DOWNLOADING_AND_POSTPROCESSING'].get('naming_scheme')
-        self.youtube_dl_arguments = \
-            json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'].get('youtube_dl_arguments'))
+        self.videos_to_download = self.config['DOWNLOADING_AND_POSTPROCESSING'].getint('videos_to_download', 1)
+        self.naming_scheme = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('naming_scheme')
+        self.youtube_dl_arguments = json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'].get('youtube_dl_arguments'))
 
-        self.disable_play_trailers = self.config['EXTRA_CONFIG'].getboolean(
-            'disable_play_trailers', False)
-        self.only_play_trailers = self.config['EXTRA_CONFIG'].getboolean(
-            'only_play_trailers', False)
-        self.skip_movies_with_existing_trailers = \
-            self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_trailers', False)
+        self.disable_play_trailers = self.config['EXTRA_CONFIG'].getboolean('disable_play_trailers', False)
+        self.only_play_trailers = self.config['EXTRA_CONFIG'].getboolean('only_play_trailers', False)
+        self.skip_movies_with_existing_trailers = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_trailers', False)
 
-        self.skip_movies_with_existing_theme = \
-            self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_theme',
-                                     False)
+        self.skip_movies_with_existing_theme = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_theme', False)
 
     def get_searches(self):
 
@@ -983,17 +964,18 @@ class ExtraSettings:
 
 def download_extra(directory, config, tmp_folder):
 
-    def process(tmp_folder, extra_type):
+    def process(tmp_folder):
         finder = ExtraFinder(directory, config)
         log.info('processing: %s', directory.name)
         finder.search()
         finder.filter_search_result()
 
         for youtube_video in finder.youtube_videos:
-            log.info(youtube_video['webpage_url'])
-            log.info(str(youtube_video['adjusted_rating']))
-            log.info(youtube_video['format'])
-            log.info(str(youtube_video['views_per_day']))
+            log.info('extra_type: %s', youtube_video['extra_type'])
+            log.info('webpage_url: %s', youtube_video['webpage_url'])
+            log.info('adjusted_rating: %s', str(youtube_video['adjusted_rating']))
+            log.info('format: %s', youtube_video['format'])
+            log.info('views_per_day: %s', str(youtube_video['views_per_day']))
 
         log.info(directory.name)
 
@@ -1002,13 +984,12 @@ def download_extra(directory, config, tmp_folder):
 
         if finder.play_trailers and finder.youtube_videos \
                 and not config.disable_play_trailers:
-            if 'duration' in finder.youtube_videos[0] and 'duration' \
-                    in finder.play_trailers[0]:
+            if 'duration' in finder.youtube_videos[0] \
+                    and 'duration' in finder.play_trailers[0]:
                 if finder.youtube_videos[0]['duration'] - 23 \
                     <= finder.play_trailers[0]['duration'] \
                         <= finder.youtube_videos[0]['duration'] + 5:
-                    finder.youtube_videos = [finder.play_trailers[0]] \
-                        + finder.youtube_videos
+                    finder.youtube_videos = [finder.play_trailers[0]] + finder.youtube_videos
                     log.info('picked play trailer.')
 
         if config.only_play_trailers:
@@ -1049,21 +1030,16 @@ def download_extra(directory, config, tmp_folder):
                 if youtube_id == youtube_video['id']:
                     finder.youtube_videos.remove(youtube_video)
 
+        # Actually download files
         downloaded_videos_meta = finder.download_videos(tmp_folder)
+
+        # Actually move files
         if downloaded_videos_meta:
             finder.move_videos(downloaded_videos_meta, tmp_folder)
-            if extra_type in config.extra_type.lower():
-                directory.trailer_youtube_video_id = \
-                    downloaded_videos_meta[0]['id']
+            if youtube_video['extra_type'] in config.extra_types.lower():
+                directory.trailer_youtube_video_id = downloaded_videos_meta[0]['id']
 
-    if config.extra_type.lower() == 'trailers':
-        process(tmp_folder, 'trailers')
-    elif config.extra_type.lower() == 'behind the scenes':
-        process(tmp_folder, 'behind the scenes')
-    elif config.extra_type.lower() == 'featurettes':
-        process(tmp_folder, 'featurettes')
-    elif config.extra_type.lower() == 'scenes':
-        process(tmp_folder, 'scenes')
+    process(tmp_folder)
 
 
 class Directory:
@@ -1098,8 +1074,8 @@ class Directory:
             self.update_all(full_path=full_path, tmdb_id=tmdb_id)
 
     @classmethod
-    def load_directory(cls, file):
-        with open(file, 'r', encoding='utf-8') as load_file:
+    def load_directory(cls, file_name):
+        with open(file_name, 'r', encoding='utf-8') as load_file:
             return Directory(None, json_dict=json.load(load_file))
 
     def update_all(self, full_path=None, tmdb_id=None):
@@ -1116,18 +1092,18 @@ class Directory:
         self.content = {}
         self.subdirectories = {}
 
-        for file in os.listdir(self.full_path):
-            if os.path.isdir(os.path.join(self.full_path, file)):
+        for file_name in os.listdir(self.full_path):
+            if os.path.isdir(os.path.join(self.full_path, file_name)):
                 sub_content = {}
                 for sub_file in os.listdir(os.path.join(self.full_path,
-                                                        file)):
+                                                        file_name)):
                     sub_content[sub_file] = \
-                        hash_file(os.path.join(self.full_path, file,
+                        hash_file(os.path.join(self.full_path, file_name,
                                   sub_file))
-                self.subdirectories[file] = sub_content
+                self.subdirectories[file_name] = sub_content
             else:
-                self.content[file] = \
-                    hash_file(os.path.join(self.full_path, file))
+                self.content[file_name] = \
+                    hash_file(os.path.join(self.full_path, file_name))
 
     def update_movie_info(self, tmdb_id=None):
 
@@ -1298,7 +1274,7 @@ def handle_directory(folder):
 
             extra_config = ExtraSettings(os.path.join(extra_configs_directory, config))
 
-            if args.replace and 'trailer' in extra_config.extra_type.lower():
+            if args.replace:
                 args.force = True
 
             if extra_config.config_id in directory.completed_configs \
@@ -1308,9 +1284,9 @@ def handle_directory(folder):
             if extra_config.skip_movies_with_existing_trailers \
                     and not args.replace:
                 skip = False
-                for file in os.listdir(directory.full_path):
-                    if file.lower().endswith('trailer.mp4') \
-                            or file.lower().endswith('trailer.mkv'):
+                for file_name in os.listdir(directory.full_path):
+                    if file_name.lower().endswith('trailer.mp4') \
+                            or file_name.lower().endswith('trailer.mkv'):
                         skip = True
                         break
                 if skip:
@@ -1319,11 +1295,11 @@ def handle_directory(folder):
                     continue
                 if os.path.isdir(os.path.join(directory.full_path,
                                  'trailers')):
-                    for file in \
+                    for file_name in \
                         os.listdir(os.path.join(directory.full_path,
                                    'trailers')):
-                        if file.lower().endswith('.mp4') \
-                                or file.lower().endswith('.mkv'):
+                        if file_name.lower().endswith('.mp4') \
+                                or file_name.lower().endswith('.mkv'):
                             skip = True
                             break
                     if skip:
@@ -1333,10 +1309,10 @@ def handle_directory(folder):
 
             if extra_config.skip_movies_with_existing_theme:
                 skip = False
-                for file in os.listdir(directory.full_path):
-                    if file.lower().endswith('theme.mp3') \
-                            or file.lower().endswith('theme.wma') \
-                            or file.lower().endswith('theme.flac'):
+                for file_name in os.listdir(directory.full_path):
+                    if file_name.lower().endswith('theme.mp3') \
+                            or file_name.lower().endswith('theme.wma') \
+                            or file_name.lower().endswith('theme.flac'):
                         skip = True
                         break
                 if skip:
@@ -1345,12 +1321,12 @@ def handle_directory(folder):
                     continue
                 if os.path.isdir(os.path.join(directory.full_path,
                                  'theme-music')):
-                    for file in \
+                    for file_name in \
                         os.listdir(os.path.join(directory.full_path,
                                    'theme-music')):
-                        if file.lower().endswith('.mp3') \
-                                or file.lower().endswith('.wma') \
-                                or file.lower().endswith('.flac'):
+                        if file_name.lower().endswith('.mp3') \
+                                or file_name.lower().endswith('.wma') \
+                                or file_name.lower().endswith('.flac'):
                             skip = True
                             break
                     if skip:
@@ -1364,7 +1340,7 @@ def handle_directory(folder):
                 old_record = directory.record
                 directory.record = []
                 for record in old_record:
-                    if record != extra_config.extra_type:
+                    if record != extra_config.extra_types:
                         directory.record.append(record)
                 extra_config.force = True
 
@@ -1372,10 +1348,10 @@ def handle_directory(folder):
                 directory.banned_youtube_videos_id.append(
                     directory.trailer_youtube_video_id)
                 shutil.rmtree(os.path.join(directory.full_path,
-                              extra_config.extra_type),
+                              extra_config.extra_types),
                               ignore_errors=True)
                 os.mkdir(os.path.join(directory.full_path,
-                         extra_config.extra_type))
+                         extra_config.extra_types))
 
             if not os.path.isdir(tmp_folder_root):
                 os.mkdir(tmp_folder_root)
@@ -1383,9 +1359,6 @@ def handle_directory(folder):
             download_extra(directory, extra_config, tmp_folder_root)
             directory.completed_configs.append(extra_config.config_id)
             directory.save_directory(records)
-
-            if args.force:
-                log.debug('record: %s', directory.record)
 
         except FileNotFoundError as e:
 
@@ -1411,7 +1384,6 @@ def handle_directory(folder):
 
             log.error('exiting! keyboard interrupt.')
             sys.exit()
-
 
 
 
