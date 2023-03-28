@@ -737,6 +737,7 @@ class ExtraFinder:
 
         arguments = self.config.youtube_dl_arguments
         arguments['writesubtitles'] = True
+        arguments['encoding'] = 'utf-8'
         arguments['quiet'] = True
         arguments['noprogress'] = True
         arguments['subtitle'] = '--write-sub --sub-lang es --write-auto-sub --sub-format srt'
@@ -838,15 +839,19 @@ class ExtraFinder:
                 os.remove(source_path)
 
         for file_name in os.listdir(tmp_folder):
-            log.debug('file_name1: %s', file_name.replace(u'\uff5c',''))
+            log.debug('down_file_name: %s', file_name.replace(u'\uff5c',''))
             # log.debug('downloaded_videos_meta: %s', downloaded_videos_meta)
             # log.debug('yt_id: %s', downloaded_videos_meta[0]['formats'])
             for video_meta in downloaded_videos_meta:
-                log.debug('file_name2: %s', video_meta['title'] + '.' + video_meta['ext'])
-                if video_meta['title'] in file_name.replace(u'\uff5c','\u007c').replace(u'\u29f8','\u002f'):
+                log.debug('meta_file_name: %s', video_meta['title'] + '.' + video_meta['ext'])
+                if video_meta['title'] in file_name.replace('\u29f8','\u002f') \
+                                                   .replace('\uff02','\u0022') \
+                                                   .replace('\uff1a','\u003a') \
+                                                   .replace('\uff1f','\u003f') \
+                                                   .replace('\uff5c','\u007c'):
                     extra_type = video_meta['extra_type']
                     log.debug('extra_type: %s', extra_type)
-                    continue
+                    break
             # log.debug('yt_id: %s', [x for x in downloaded_videos_meta if x['title'] + '.' + x['ext'] == file_name])
             # log.debug('yt_id: %s', list(filter(lambda x:x["formats"]=="CZ1094", downloaded_videos_meta)))
             source_path = os.path.join(tmp_folder, file_name)
