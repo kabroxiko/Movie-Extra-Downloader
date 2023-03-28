@@ -6,7 +6,7 @@ from bisect import bisect
 from datetime import date
 
 from urllib.parse import quote
-from urllib.request import urlopen
+from requests import Request, Session
 from urllib.error import URLError, HTTPError
 
 import os
@@ -80,28 +80,6 @@ def apply_query_template(template, keys):
 
     return space_cleanup(ret)
 
-
-def replace_roman_numbers(string):
-    ret = ' ' + string.lower() + ' '
-
-    ret = (ret.replace(' ix ', '')
-              .replace(' viiii ', '')
-              .replace(' viii ', '')
-              .replace(' vii ', '')
-              .replace(' vi ', '')
-              .replace(' iv ', '')
-              .replace(' iiii ', '')
-              .replace(' iii ', '')
-              .replace(' ii ', '')
-              .replace(' trailer 4 ', '')
-              .replace(' trailer 3 ', '')
-              .replace(' trailer 2 ', '')
-              .replace(' trailer 1 ', ''))
-
-
-    return space_cleanup(ret)
-
-
 def get_keyword_list(string):
 
     ret = ' ' + get_clean_string(string).lower() + ' '
@@ -162,7 +140,7 @@ def get_clean_string(string):
               .replace(' : ', '')
               .replace('/ ', '')
               .replace(' /', '')
-              .replace(' & ', ''))
+              .replace(' & ', ' '))
 
 
     ret_tup = ret.split(' ')
@@ -176,7 +154,7 @@ def get_clean_string(string):
         else:
             ret_count += len(ret_tup[ret_tup_count]) + 1
 
-    return space_cleanup(replace_roman_numbers(ret))
+    return space_cleanup(ret)
 
 
 def space_cleanup(string):
@@ -204,14 +182,18 @@ def hash_file(file_path):
     return response
 
 
-def retrieve_web_page(url, page_name='page'):
+def retrieve_web_page(url, params, page_name='page'):
 
+    session = Session()
     response = None
     log.info('Browsing %s.', page_name)
 
     for tries in range(1, 10):
         try:
-            response = urlopen(url, timeout=2)
+            request = Request('GET', url)
+            prepped = session.prepare_request(request)
+            # prepped.headers['Content-Type'] = 'application/json;charset=utf-8'
+            response = session.send(prepped, timeout=2)
             break
         except UnicodeEncodeError as e:
 
@@ -244,13 +226,12 @@ def retrieve_web_page(url, page_name='page'):
 
 def search_tmdb_by_id(tmdb_id, extra_types, limit):
     ret_url_list = []
-    url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' \
-        + str(tmdb_id) + '/videos' \
+    url = tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) + '/videos' \
         + '?api_key=' + tmdb_api_key \
         + '&language=en-US'
     log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
-    response = retrieve_web_page(url, 'tmdb movie videos')
-    data = json.loads(response.read().decode('utf-8'))
+    response = retrieve_web_page(url, 'tmdb media videos')
+    data = json.loads(response.text)
     response.close()
     if len(data['results']) == 0:
         log.error('No videos found')
@@ -278,13 +259,13 @@ def search_tmdb_by_id(tmdb_id, extra_types, limit):
 
 
 def search_tmdb_by_title(title, mediatype):
-    url = 'https://api.themoviedb.org/3/search/' + mediatype \
+    url = tmdb_api_url + '/search/' + mediatype \
         + '?api_key=' + tmdb_api_key \
         + '&query=' + quote(title.encode('utf-8')) \
         + '&language=en-US&page=1&include_adult=false'
     log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb movie search page')
-    data = json.loads(response.read().decode('utf-8'))
+    data = json.loads(response.text)
     response.close()
 
     return data
@@ -1135,12 +1116,12 @@ class Directory:
             return True
 
         def get_tmdb_details_data(tmdb_id):
-            url = 'https://api.themoviedb.org/3/' + args.mediatype + '/' + str(tmdb_id) + \
-                                            '?api_key=' + tmdb_api_key + \
-                                            '&language=en-US'
+            url = tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) \
+                + '?api_key=' + tmdb_api_key \
+                + '&language=en-US'
             log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
-            response = retrieve_web_page(url, 'movie details')
-            data = json.loads(response.read().decode('utf-8'))
+            response = retrieve_web_page(url, 'tmdb media details')
+            data = json.loads(response.text)
             response.close()
 
             return data
@@ -1399,7 +1380,9 @@ extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]),'extra_confi
 configs_content = os.listdir(extra_configs_directory)
 records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
 
+tmdb_api_url = 'https://api.themoviedb.org/3'
 tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
+
 test_result = search_tmdb_by_title('star wars', 'movie')
 if test_result is None:
     log.error('Warning: No working TMDB api key was specified.')
