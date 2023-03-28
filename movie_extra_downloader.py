@@ -192,7 +192,6 @@ def retrieve_web_page(url, params, page_name='page'):
         try:
             request = Request('GET', url)
             prepped = session.prepare_request(request)
-            # prepped.headers['Content-Type'] = 'application/json;charset=utf-8'
             response = session.send(prepped, timeout=2)
             break
         except UnicodeEncodeError as e:
@@ -742,7 +741,6 @@ class ExtraFinder:
                     with yt_dlp.YoutubeDL(arguments) as ydl:
                         info = ydl.extract_info(youtube_video['webpage_url'])
                         info["extra_type"] = youtube_video['extra_type']
-                        # info["filename"] = youtube_video['fulltitle'] + '.'+ youtube_video['ext']
                         meta = ydl.sanitize_info(info)
                         downloaded_videos_meta.append(meta)
                         count += 1
@@ -821,8 +819,6 @@ class ExtraFinder:
 
         for file_name in os.listdir(tmp_folder):
             log.debug('down_file_name: %s', file_name.replace(u'\uff5c',''))
-            # log.debug('downloaded_videos_meta: %s', downloaded_videos_meta)
-            # log.debug('yt_id: %s', downloaded_videos_meta[0]['formats'])
             for video_meta in downloaded_videos_meta:
                 log.debug('meta_file_name: %s', video_meta['title'] + '.' + video_meta['ext'])
                 if video_meta['title'] in file_name.replace('\u29f8','\u002f') \
@@ -833,8 +829,6 @@ class ExtraFinder:
                     extra_type = video_meta['extra_type']
                     log.debug('extra_type: %s', extra_type)
                     break
-            # log.debug('yt_id: %s', [x for x in downloaded_videos_meta if x['title'] + '.' + x['ext'] == file_name])
-            # log.debug('yt_id: %s', list(filter(lambda x:x["formats"]=="CZ1094", downloaded_videos_meta)))
             source_path = os.path.join(tmp_folder, file_name)
             if self.config.extra_types == 'theme-music':
                 target_path = os.path.join(self.directory.full_path, 'theme.mp3')
