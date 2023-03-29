@@ -732,7 +732,7 @@ class ExtraFinder:
 
         for youtube_video in self.youtube_videos[:]:
             if not self.config.force:
-                for youtube_video_id in self.directory.record:
+                for youtube_video_id in self.directory.records:
                     if youtube_video_id == youtube_video['id']:
                         continue
 
@@ -774,7 +774,7 @@ class ExtraFinder:
                     youtube_video_id = meta['id']
                     break
 
-            self.directory.record.append({
+            self.directory.records.append({
                 'hash': file_hash,
                 'file_path': os.path.join(self.directory.full_path, extra_type, file_name),
                 'file_name': file_name,
@@ -837,7 +837,7 @@ class ExtraFinder:
 
             file_hash = hash_file(source_path)
 
-            if any(file_hash == record['hash'] for record in self.directory.record):
+            if any(file_hash == record['hash'] for record in self.directory.records):
                 os.remove(source_path)
                 continue
 
@@ -1044,7 +1044,7 @@ class Directory:
         self.banned_years = []
         self.banned_youtube_videos_id = []
 
-        self.record = []
+        self.records = []
         self.completed_configs = []
 
         if full_path is None:
@@ -1317,11 +1317,11 @@ def handle_directory(folder):
             directory.update_content()
 
             if args.force:
-                old_record = directory.record
-                directory.record = []
-                for record in old_record:
+                old_records = directory.records
+                directory.records = []
+                for record in old_records:
                     if record != extra_config.extra_types:
-                        directory.record.append(record)
+                        directory.records.append(record)
                 extra_config.force = True
 
             if args.replace:
