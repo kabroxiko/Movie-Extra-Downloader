@@ -840,7 +840,7 @@ class ExtraFinder:
 
             case = determine_case()
 
-            log.debug('Moving file to folder: %s', extra_type)
+            log.debug('Moving file to %s folder', extra_type)
             if case == 'name_in_directory':
                 handle_name_in_directory()
             elif case == 'hash_in_directory':
