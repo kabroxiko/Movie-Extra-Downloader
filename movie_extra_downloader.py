@@ -818,16 +818,13 @@ class ExtraFinder:
                 os.remove(source_path)
 
         for file_name in os.listdir(tmp_folder):
-            log.debug('down_file_name: %s', file_name.replace(u'\uff5c',''))
             for video_meta in downloaded_videos_meta:
-                log.debug('meta_file_name: %s', video_meta['title'] + '.' + video_meta['ext'])
                 if video_meta['title'] in file_name.replace('\u29f8','\u002f') \
                                                    .replace('\uff02','\u0022') \
                                                    .replace('\uff1a','\u003a') \
                                                    .replace('\uff1f','\u003f') \
                                                    .replace('\uff5c','\u007c'):
                     extra_type = video_meta['extra_type']
-                    log.debug('extra_type: %s', extra_type)
                     break
             source_path = os.path.join(tmp_folder, file_name)
             if self.config.extra_types == 'theme-music':
@@ -843,6 +840,7 @@ class ExtraFinder:
 
             case = determine_case()
 
+            log.debug('Moving file to folder: %s', extra_type)
             if case == 'name_in_directory':
                 handle_name_in_directory()
             elif case == 'hash_in_directory':
@@ -1071,41 +1069,32 @@ class Directory:
 
         self.content = {}
         self.subdirectories = {}
-
         for file_name in os.listdir(self.full_path):
             if os.path.isdir(os.path.join(self.full_path, file_name)):
                 sub_content = {}
-                for sub_file in os.listdir(os.path.join(self.full_path,
-                                                        file_name)):
-                    sub_content[sub_file] = \
-                        hash_file(os.path.join(self.full_path, file_name,
-                                  sub_file))
+                for sub_file in os.listdir(os.path.join(self.full_path, file_name)):
+                    sub_content[sub_file] = hash_file(os.path.join(self.full_path, file_name, sub_file))
                 self.subdirectories[file_name] = sub_content
             else:
-                self.content[file_name] = \
-                    hash_file(os.path.join(self.full_path, file_name))
+                self.content[file_name] = hash_file(os.path.join(self.full_path, file_name))
 
     def update_movie_info(self, tmdb_id=None):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
 
-            if any(clean_name_tuple[-1] == str(year) for year in
-                   range(1896, date.today().year + 2)):
+            log.debug('###### %s', len(clean_name_tuple))
+            if len(clean_name_tuple) > 1 \
+                    and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
                 self.movie_release_year = int(clean_name_tuple[-1])
                 self.movie_title = ' '.join(clean_name_tuple[:-1])
-                self.movie_original_title = \
-                    ' '.join(clean_name_tuple[:-1])
+                self.movie_original_title = ' '.join(clean_name_tuple[:-1])
             else:
-
                 self.movie_release_year = None
                 self.movie_title = ' '.join(clean_name_tuple)
                 self.movie_original_title = ' '.join(clean_name_tuple)
-
-            self.movie_title_keywords = \
-                get_keyword_list(self.movie_title)
-            self.movie_original_title_keywords = \
-                get_keyword_list(self.movie_original_title)
+            self.movie_title_keywords = get_keyword_list(self.movie_title)
+            self.movie_original_title_keywords = get_keyword_list(self.movie_original_title)
 
             return True
 
@@ -1325,8 +1314,7 @@ def handle_directory(folder):
                 extra_config.force = True
 
             if args.replace:
-                directory.banned_youtube_videos_id.append(
-                    directory.trailer_youtube_video_id)
+                directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
                 shutil.rmtree(os.path.join(directory.full_path,
                               extra_config.extra_types),
                               ignore_errors=True)
