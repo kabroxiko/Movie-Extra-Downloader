@@ -553,12 +553,9 @@ class ExtraFinder:
                 title_in_video = True
 
             if self.directory.movie_original_title is not None:
-                buffer = \
-                    int(len(self.directory.movie_original_title_keywords)
-                        / 4 + 0.1)
+                buffer = int(len(self.directory.movie_original_title_keywords) / 4 + 0.1)
 
-                for keyword in \
-                        self.directory.movie_original_title_keywords:
+                for keyword in self.directory.movie_original_title_keywords:
                     if keyword.lower() not in youtube_video['title'].lower():
                         buffer -= 1
                         if buffer < 0:
@@ -670,8 +667,7 @@ class ExtraFinder:
                     filtered_list = highest()
                 if filter_args[1] == 'lowest':
                     filtered_list = lowest()
-            if self.play_trailers and self.config.extra_types \
-                    == 'trailers':
+            if self.play_trailers and self.config.extra_types == 'trailers':
                 if len(filtered_list) + 1 >= self.config.break_limit:
                     break
             else:
@@ -701,8 +697,7 @@ class ExtraFinder:
         not_preferred_channels = []
 
         for youtube_video in self.youtube_videos:
-            if youtube_video['uploader'] \
-                    in self.config.preferred_channels:
+            if youtube_video['uploader'] in self.config.preferred_channels:
                 preferred_videos.append(youtube_video)
             else:
                 not_preferred_channels.append(youtube_video)
@@ -716,11 +711,7 @@ class ExtraFinder:
         downloaded_videos_meta = []
 
         arguments = self.config.youtube_dl_arguments
-        arguments['writesubtitles'] = True
         arguments['encoding'] = 'utf-8'
-        arguments['quiet'] = True
-        arguments['noprogress'] = True
-        arguments['subtitle'] = '--write-sub --sub-lang es --write-auto-sub --sub-format srt'
         arguments['logger'] = log
         arguments['outtmpl'] = os.path.join(tmp_file, arguments['outtmpl'])
         for (key, value) in arguments.items():
@@ -1262,11 +1253,9 @@ def handle_directory(folder):
                     log.info('movie already have a trailer. skipping.')
                     directory.save_directory(records)
                     continue
-                if os.path.isdir(os.path.join(directory.full_path,
-                                 'trailers')):
+                if os.path.isdir(os.path.join(directory.full_path, 'trailers')):
                     for file_name in \
-                        os.listdir(os.path.join(directory.full_path,
-                                   'trailers')):
+                        os.listdir(os.path.join(directory.full_path, 'trailers')):
                         if file_name.lower().endswith('.mp4') \
                                 or file_name.lower().endswith('.mkv'):
                             skip = True
@@ -1291,8 +1280,7 @@ def handle_directory(folder):
                 if os.path.isdir(os.path.join(directory.full_path,
                                  'theme-music')):
                     for file_name in \
-                        os.listdir(os.path.join(directory.full_path,
-                                   'theme-music')):
+                        os.listdir(os.path.join(directory.full_path, 'theme-music')):
                         if file_name.lower().endswith('.mp3') \
                                 or file_name.lower().endswith('.wma') \
                                 or file_name.lower().endswith('.flac'):
