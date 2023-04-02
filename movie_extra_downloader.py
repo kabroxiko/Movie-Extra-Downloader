@@ -698,7 +698,7 @@ def handle_directory(folder):
     if not os.path.isdir(settings.tmp_folder_root):
         os.mkdir(settings.tmp_folder_root)
 
-    download_extra(record, settings)
+    download_extra(record)
     record.save_record(settings.records)
 
 settings = Settings()
