@@ -445,57 +445,6 @@ class Settings:
         self.force = default_config.get('SETTINGS', 'force')
         self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
 
-def download_extra(directory, settings, tmp_folder):
-
-    def process(tmp_folder):
-        finder = ExtraFinder(directory, settings)
-        log.info('processing: %s', directory.name)
-        finder.search()
-
-        for youtube_video in finder.youtube_videos:
-            log.info('extra_type: %s', youtube_video['extra_type'])
-            log.info('webpage_url: %s', youtube_video['webpage_url'])
-            log.info('adjusted_rating: %s', str(youtube_video['adjusted_rating']))
-            log.info('format: %s', youtube_video['format'])
-            log.info('views_per_day: %s', str(youtube_video['views_per_day']))
-
-        log.info(directory.name)
-
-
-        for youtube_video in finder.youtube_videos:
-            log.info('%s : %s (%s)',
-                    youtube_video['webpage_url'],
-                    youtube_video['format'],
-                    str(youtube_video['adjusted_rating']))
-        for youtube_video in finder.play_trailers:
-            log.info('play trailer: %s : %s',
-                    youtube_video['webpage_url'],
-                    youtube_video['format'])
-        log.info('downloading for: %s', directory.name)
-        count = 0
-        tmp_folder = os.path.join(tmp_folder, 'tmp_0')
-        while True:
-            try:
-                while os.listdir(tmp_folder):
-                    if count == 0 and not tmp_folder.endswith('_0'):
-                        tmp_folder += '_0'
-                    else:
-                        tmp_folder = tmp_folder[:-2] + '_' + str(count)
-                        count += 1
-                break
-            except FileNotFoundError:
-                os.mkdir(tmp_folder)
-
-        # Actually download files
-        downloaded_videos_meta = finder.download_videos(tmp_folder)
-
-        # Actually move files
-        if downloaded_videos_meta:
-            finder.move_videos(downloaded_videos_meta, tmp_folder)
-
-    process(tmp_folder)
-
-
 class Directory:
 
     def __init__(self, full_path, tmdb_id=None, json_dict=None):
@@ -666,6 +615,53 @@ class Directory:
             os.mkdir(os.path.join(save_path))
         with open(os.path.join(save_path, self.name + ".json"), 'w') as save_file:
             json.dump(self.__dict__, save_file, indent = 4)
+
+
+def download_extra(directory, settings, tmp_folder):
+    finder = ExtraFinder(directory, settings)
+    log.info('processing: %s', directory.name)
+    finder.search()
+
+    for youtube_video in finder.youtube_videos:
+        log.info('extra_type: %s', youtube_video['extra_type'])
+        log.info('webpage_url: %s', youtube_video['webpage_url'])
+        log.info('adjusted_rating: %s', str(youtube_video['adjusted_rating']))
+        log.info('format: %s', youtube_video['format'])
+        log.info('views_per_day: %s', str(youtube_video['views_per_day']))
+
+    log.info(directory.name)
+
+
+    for youtube_video in finder.youtube_videos:
+        log.info('%s : %s (%s)',
+                youtube_video['webpage_url'],
+                youtube_video['format'],
+                str(youtube_video['adjusted_rating']))
+    for youtube_video in finder.play_trailers:
+        log.info('play trailer: %s : %s',
+                youtube_video['webpage_url'],
+                youtube_video['format'])
+    log.info('downloading for: %s', directory.name)
+    count = 0
+    tmp_folder = os.path.join(tmp_folder, 'tmp_0')
+    while True:
+        try:
+            while os.listdir(tmp_folder):
+                if count == 0 and not tmp_folder.endswith('_0'):
+                    tmp_folder += '_0'
+                else:
+                    tmp_folder = tmp_folder[:-2] + '_' + str(count)
+                    count += 1
+            break
+        except FileNotFoundError:
+            os.mkdir(tmp_folder)
+
+    # Actually download files
+    downloaded_videos_meta = finder.download_videos(tmp_folder)
+
+    # Actually move files
+    if downloaded_videos_meta:
+        finder.move_videos(downloaded_videos_meta, tmp_folder)
 
 
 def handle_directory(folder):
