@@ -187,7 +187,6 @@ def retrieve_web_page(url, params, page_name='page'):
 
 
 def search_tmdb_by_id(tmdb_id, extra_types):
-    ret_url_list = []
     url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) + '/videos' \
         + '?api_key=' + settings.tmdb_api_key \
         + '&language=en-US'
@@ -200,6 +199,7 @@ def search_tmdb_by_id(tmdb_id, extra_types):
         return None
 
     log.debug('Search for: %s', extra_types)
+    ret_url_list = []
     for data in data['results']:
         log.debug('Found: type=%s key=%s', data['type'], data['key'])
         extra_type = None
@@ -237,9 +237,9 @@ class ExtraFinder:
 
     conn_errors = 0
 
-    def __init__(self, directory, settings):
+    def __init__(self, record):
 
-        self.directory = directory
+        self.record = record
         self.complete = True
 
         self.youtube_videos = []
@@ -329,8 +329,8 @@ class ExtraFinder:
 
         url_list = []
 
-        if self.directory.tmdb_id:
-            urls = search_tmdb_by_id(self.directory.tmdb_id, settings.extra_types)
+        if self.record.tmdb_id:
+            urls = search_tmdb_by_id(self.record.tmdb_id, settings.extra_types)
             log.debug('urls: %s', urls)
         else:
             log.error('tmdb_id is missing')
@@ -368,7 +368,7 @@ class ExtraFinder:
 
         for youtube_video in self.youtube_videos[:]:
             if not settings.force:
-                for youtube_video_id in self.directory.records:
+                for youtube_video_id in self.record.records:
                     if youtube_video_id == youtube_video['id']:
                         continue
 
@@ -405,7 +405,7 @@ class ExtraFinder:
             for meta in downloaded_videos_meta:
                 youtube_video_id = meta['id']
 
-            self.directory.records.append({
+            self.record.records.append({
                 'youtube_video_id': youtube_video_id,
                 'file_path': extra_type,
                 'file_name': file_name,
@@ -423,9 +423,9 @@ class ExtraFinder:
                     break
             source_path = os.path.join(tmp_folder, file_name)
             if settings.extra_types == 'theme-music':
-                target_path = os.path.join(self.directory.full_path, 'theme.mp3')
+                target_path = os.path.join(self.record.full_path, 'theme.mp3')
             else:
-                target_path = os.path.join(self.directory.full_path, extra_type, file_name)
+                target_path = os.path.join(self.record.full_path, extra_type, file_name)
 
             log.debug('Moving file to %s folder', extra_type)
             copy_file()
@@ -445,12 +445,11 @@ class Settings:
         self.force = default_config.get('SETTINGS', 'force')
         self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
 
-class Directory:
+class Record:
 
-    def __init__(self, full_path, tmdb_id=None, json_dict=None):
+    def __init__(self, tmdb_id=None, json_dict=None):
 
         self.name = None
-        self.full_path = None
 
         self.tmdb_id = None
         self.movie_title = None
@@ -461,23 +460,18 @@ class Directory:
 
         self.records = []
 
-        if full_path is None:
-            for (key, value) in json_dict.items():
-                setattr(self, key, value)
-        else:
-            self.update_all(full_path=full_path, tmdb_id=tmdb_id)
+        self.update_all(tmdb_id=tmdb_id)
 
     @classmethod
     def load_directory(cls, file_name):
         with open(file_name, 'r', encoding='utf-8') as load_file:
-            return Directory(None, json_dict=json.load(load_file))
+            return Record(json_dict=json.load(load_file))
 
 
-    def update_all(self, full_path=None, tmdb_id=None):
+    def update_all(self, tmdb_id=None):
 
-        if full_path is not None:
-            self.name = os.path.split(full_path)[1]
-            self.full_path = full_path
+        self.name = os.path.split(args.directory)[1]
+        self.full_path = args.directory
         self.update_movie_info(tmdb_id)
 
 
@@ -501,7 +495,7 @@ class Directory:
             return True
 
         def get_tmdb_details_data(tmdb_id):
-            url = tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) \
+            url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) \
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
             log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
@@ -617,9 +611,9 @@ class Directory:
             json.dump(self.__dict__, save_file, indent = 4)
 
 
-def download_extra(directory, settings, tmp_folder):
-    finder = ExtraFinder(directory, settings)
-    log.info('processing: %s', directory.name)
+def download_extra(record, settings):
+    finder = ExtraFinder(record)
+    log.info('processing: %s', record.name)
     finder.search()
 
     for youtube_video in finder.youtube_videos:
@@ -629,7 +623,7 @@ def download_extra(directory, settings, tmp_folder):
         log.info('format: %s', youtube_video['format'])
         log.info('views_per_day: %s', str(youtube_video['views_per_day']))
 
-    log.info(directory.name)
+    log.info(record.name)
 
 
     for youtube_video in finder.youtube_videos:
@@ -641,9 +635,9 @@ def download_extra(directory, settings, tmp_folder):
         log.info('play trailer: %s : %s',
                 youtube_video['webpage_url'],
                 youtube_video['format'])
-    log.info('downloading for: %s', directory.name)
+    log.info('downloading for: %s', record.name)
     count = 0
-    tmp_folder = os.path.join(tmp_folder, 'tmp_0')
+    tmp_folder = os.path.join(settings.tmp_folder_root, 'tmp_0')
     while True:
         try:
             while os.listdir(tmp_folder):
@@ -665,47 +659,47 @@ def download_extra(directory, settings, tmp_folder):
 
 
 def handle_directory(folder):
-    log.info('working on directory: %s', folder)
+    log.info('working on record: %s', folder)
 
     try:
         if not args.force:
-            directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1] + ".json"))
+            record = Record.load_directory(os.path.join(records, os.path.split(folder)[1] + ".json"))
         else:
             if has_tmdb_key:
-                directory = Directory(folder, tmdb_id=args.tmdbid)
+                record = Record(tmdb_id=args.tmdbid)
             else:
-                directory = Directory(folder)
+                record = Record()
     except FileNotFoundError:
         if has_tmdb_key:
-            directory = Directory(folder, tmdb_id=args.tmdbid)
+            record = Record(tmdb_id=args.tmdbid)
         else:
-            directory = Directory(folder)
+            record = Record()
 
-    if directory.tmdb_id is None:
+    if record.tmdb_id is None:
         sys.exit()
 
     if args.replace:
         args.force = True
 
     if args.force:
-        old_records = directory.records
-        directory.records = []
+        old_records = record.records
+        record.records = []
         for record in old_records:
             if record != settings.extra_types:
-                directory.records.append(record)
+                record.records.append(record)
         force = True
 
     if args.replace:
         for extra_type in settings.extra_types:
-            shutil.rmtree(os.path.join(directory.full_path,
+            shutil.rmtree(os.path.join(record.full_path,
                         extra_type),
                         ignore_errors=True)
 
     if not os.path.isdir(settings.tmp_folder_root):
         os.mkdir(settings.tmp_folder_root)
 
-    download_extra(directory, settings, settings.tmp_folder_root)
-    directory.save_record(settings.records)
+    download_extra(record, settings)
+    record.save_record(settings.records)
 
 settings = Settings()
 
