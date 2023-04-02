@@ -145,20 +145,6 @@ def space_cleanup(string):
     return ret
 
 
-def hash_file(file_path):
-    response = None
-    if not os.path.isdir(file_path):
-        md5 = hashlib.md5()
-        with open(file_path, 'rb') as file_name:
-            for i in range(10):
-                data = file_name.read(2 ** 20)
-                if not data:
-                    break
-                md5.update(data)
-        response = md5.hexdigest()
-    return response
-
-
 def retrieve_web_page(url, params, page_name='page'):
 
     session = Session()
@@ -254,7 +240,6 @@ class ExtraFinder:
     def __init__(self, directory, settings):
 
         self.directory = directory
-        self.config = settings
         self.complete = True
 
         self.youtube_videos = []
@@ -382,7 +367,7 @@ class ExtraFinder:
         count = 0
 
         for youtube_video in self.youtube_videos[:]:
-            if not self.config.force:
+            if not settings.force:
                 for youtube_video_id in self.directory.records:
                     if youtube_video_id == youtube_video['id']:
                         continue
@@ -418,15 +403,12 @@ class ExtraFinder:
         def record_file():
             youtube_video_id = 'unknown'
             for meta in downloaded_videos_meta:
-                if meta['title'] + '.' + meta['ext'] == file_name:
-                    youtube_video_id = meta['id']
-                    break
+                youtube_video_id = meta['id']
 
             self.directory.records.append({
-                'hash': file_hash,
+                'youtube_video_id': youtube_video_id,
                 'file_path': extra_type,
                 'file_name': file_name,
-                'youtube_video_id': youtube_video_id,
                 'extra_type': extra_type,
             })
 
@@ -444,8 +426,6 @@ class ExtraFinder:
                 target_path = os.path.join(self.directory.full_path, 'theme.mp3')
             else:
                 target_path = os.path.join(self.directory.full_path, extra_type, file_name)
-
-            file_hash = hash_file(source_path)
 
             log.debug('Moving file to %s folder', extra_type)
             copy_file()
@@ -465,10 +445,10 @@ class Settings:
         self.force = default_config.get('SETTINGS', 'force')
         self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
 
-def download_extra(directory, config, tmp_folder):
+def download_extra(directory, settings, tmp_folder):
 
     def process(tmp_folder):
-        finder = ExtraFinder(directory, config)
+        finder = ExtraFinder(directory, settings)
         log.info('processing: %s', directory.name)
         finder.search()
 
