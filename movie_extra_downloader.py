@@ -411,10 +411,6 @@ class Record:
     def update_all(self):
 
         self.name = os.path.split(args.directory)[1]
-        self.update_movie_info()
-
-
-    def update_movie_info(self):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
