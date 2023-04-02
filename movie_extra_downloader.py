@@ -202,10 +202,10 @@ def retrieve_web_page(url, params, page_name='page'):
 
 def search_tmdb_by_id(tmdb_id, extra_types):
     ret_url_list = []
-    url = tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) + '/videos' \
-        + '?api_key=' + tmdb_api_key \
+    url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) + '/videos' \
+        + '?api_key=' + settings.tmdb_api_key \
         + '&language=en-US'
-    log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
+    log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb media videos')
     data = json.loads(response.text)
     response.close()
@@ -235,11 +235,11 @@ def search_tmdb_by_id(tmdb_id, extra_types):
 
 
 def search_tmdb_by_title(title, mediatype):
-    url = tmdb_api_url + '/search/' + mediatype \
-        + '?api_key=' + tmdb_api_key \
+    url = settings.tmdb_api_url + '/search/' + mediatype \
+        + '?api_key=' + settings.tmdb_api_key \
         + '&query=' + quote(title.encode('utf-8')) \
         + '&language=en-US&page=1&include_adult=false'
-    log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
+    log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
     response = retrieve_web_page(url, 'tmdb movie search page')
     data = json.loads(response.text)
     response.close()
@@ -345,7 +345,7 @@ class ExtraFinder:
         url_list = []
 
         if self.directory.tmdb_id:
-            urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_types)
+            urls = search_tmdb_by_id(self.directory.tmdb_id, settings.extra_types)
             log.debug('urls: %s', urls)
         else:
             log.error('tmdb_id is missing')
@@ -370,10 +370,10 @@ class ExtraFinder:
 
         downloaded_videos_meta = []
 
-        arguments = self.config.youtube_dl_arguments
+        arguments = settings.youtube_dl_arguments
         arguments['encoding'] = 'utf-8'
         arguments['logger'] = log
-        arguments['outtmpl'] = os.path.join(tmp_file, arguments['outtmpl'])
+        arguments['outtmpl'] = os.path.join(tmp_file, '%(title)s.%(ext)s')
         for (key, value) in arguments.items():
             if isinstance(value, str):
                 if value.lower() == 'false' or value.lower() == 'no':
@@ -424,7 +424,7 @@ class ExtraFinder:
 
             self.directory.records.append({
                 'hash': file_hash,
-                'file_path': os.path.join(self.directory.full_path, extra_type, file_name),
+                'file_path': extra_type,
                 'file_name': file_name,
                 'youtube_video_id': youtube_video_id,
                 'extra_type': extra_type,
@@ -440,7 +440,7 @@ class ExtraFinder:
                     extra_type = video_meta['extra_type']
                     break
             source_path = os.path.join(tmp_folder, file_name)
-            if self.config.extra_types == 'theme-music':
+            if settings.extra_types == 'theme-music':
                 target_path = os.path.join(self.directory.full_path, 'theme.mp3')
             else:
                 target_path = os.path.join(self.directory.full_path, extra_type, file_name)
@@ -453,14 +453,17 @@ class ExtraFinder:
 
 
 class Settings:
-    def __init__(self, config_path):
-        with codecs.open(config_path, 'r') as file_name:
-            self.config = configparser.RawConfigParser()
-            self.config.read_file(file_name)
+    def __init__(self):
+        default_config = configparser.ConfigParser()
+        default_config.read(os.path.join(os.path.dirname(sys.argv[0]),'default_config.cfg'))
 
-        self.extra_types =  json.loads(self.config['SETTINGS'].get('extra_types'))
-        self.force = self.config['SETTINGS'].getboolean('force')
-        self.youtube_dl_arguments = json.loads(self.config['SETTINGS'].get('youtube_dl_arguments'))
+        self.tmp_folder_root = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
+        self.records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
+        self.tmdb_api_url = 'https://api.themoviedb.org/3'
+        self.tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
+        self.extra_types = json.loads(default_config.get('SETTINGS', 'extra_types'))
+        self.force = default_config.get('SETTINGS', 'force')
+        self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
 
 def download_extra(directory, config, tmp_folder):
 
@@ -502,10 +505,6 @@ def download_extra(directory, config, tmp_folder):
                 break
             except FileNotFoundError:
                 os.mkdir(tmp_folder)
-        for youtube_id in directory.banned_youtube_videos_id:
-            for youtube_video in finder.youtube_videos:
-                if youtube_id == youtube_video['id']:
-                    finder.youtube_videos.remove(youtube_video)
 
         # Actually download files
         downloaded_videos_meta = finder.download_videos(tmp_folder)
@@ -513,8 +512,6 @@ def download_extra(directory, config, tmp_folder):
         # Actually move files
         if downloaded_videos_meta:
             finder.move_videos(downloaded_videos_meta, tmp_folder)
-            if youtube_video['extra_type'] in [e.lower() for e in config.extra_types]:
-                directory.trailer_youtube_video_id = downloaded_videos_meta[0]['id']
 
     process(tmp_folder)
 
@@ -525,8 +522,6 @@ class Directory:
 
         self.name = None
         self.full_path = None
-        self.content = dict
-        self.subdirectories = {}
 
         self.tmdb_id = None
         self.movie_title = None
@@ -534,15 +529,8 @@ class Directory:
         self.movie_original_title_keywords = None
         self.movie_release_year = None
         self.movie_title_keywords = []
-        self.movie_crew_data = []
-        self.trailer_youtube_video_id = None
-
-        self.banned_title_keywords = []
-        self.banned_years = []
-        self.banned_youtube_videos_id = []
 
         self.records = []
-        self.completed_configs = []
 
         if full_path is None:
             for (key, value) in json_dict.items():
@@ -555,34 +543,20 @@ class Directory:
         with open(file_name, 'r', encoding='utf-8') as load_file:
             return Directory(None, json_dict=json.load(load_file))
 
+
     def update_all(self, full_path=None, tmdb_id=None):
 
         if full_path is not None:
             self.name = os.path.split(full_path)[1]
             self.full_path = full_path
-        self.update_content()
         self.update_movie_info(tmdb_id)
 
-
-    def update_content(self):
-
-        self.content = {}
-        self.subdirectories = {}
-        for file_name in os.listdir(self.full_path):
-            if os.path.isdir(os.path.join(self.full_path, file_name)):
-                sub_content = {}
-                for sub_file in os.listdir(os.path.join(self.full_path, file_name)):
-                    sub_content[sub_file] = hash_file(os.path.join(self.full_path, file_name, sub_file))
-                self.subdirectories[file_name] = sub_content
-            else:
-                self.content[file_name] = hash_file(os.path.join(self.full_path, file_name))
 
     def update_movie_info(self, tmdb_id=None):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
 
-            log.debug('###### %s', len(clean_name_tuple))
             if len(clean_name_tuple) > 1 \
                     and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
                 self.movie_release_year = int(clean_name_tuple[-1])
@@ -599,9 +573,9 @@ class Directory:
 
         def get_tmdb_details_data(tmdb_id):
             url = tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) \
-                + '?api_key=' + tmdb_api_key \
+                + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
-            log.debug('url: %s', url.replace(tmdb_api_key, "[masked]"))
+            log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
             response = retrieve_web_page(url, 'tmdb media details')
             data = json.loads(response.text)
             response.close()
@@ -708,8 +682,6 @@ class Directory:
 
 
     def save_record(self, save_path):
-        self.content = None
-        self.subdirectories = None
         if not os.path.isdir(save_path):
             os.mkdir(os.path.join(save_path))
         with open(os.path.join(save_path, self.name + ".json"), 'w') as save_file:
@@ -718,91 +690,48 @@ class Directory:
 
 def handle_directory(folder):
     log.info('working on directory: %s', folder)
-    for config in configs_content:
 
-        if config.startswith('.') or config.startswith('_'):
-            continue
-        try:
-            try:
-                if not args.force:
-                    directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1] + ".json"))
-                else:
-                    if has_tmdb_key:
-                        directory = Directory(folder, tmdb_id=args.tmdbid)
-                    else:
-                        directory = Directory(folder)
-            except FileNotFoundError:
-                if has_tmdb_key:
-                    directory = Directory(folder, tmdb_id=args.tmdbid)
-                else:
-                    directory = Directory(folder)
+    try:
+        if not args.force:
+            directory = Directory.load_directory(os.path.join(records, os.path.split(folder)[1] + ".json"))
+        else:
+            if has_tmdb_key:
+                directory = Directory(folder, tmdb_id=args.tmdbid)
+            else:
+                directory = Directory(folder)
+    except FileNotFoundError:
+        if has_tmdb_key:
+            directory = Directory(folder, tmdb_id=args.tmdbid)
+        else:
+            directory = Directory(folder)
 
-            if directory.tmdb_id is None:
-                sys.exit()
+    if directory.tmdb_id is None:
+        sys.exit()
 
-            settings = Settings(os.path.join(extra_configs_directory, config))
+    if args.replace:
+        args.force = True
 
-            if args.replace:
-                args.force = True
+    if args.force:
+        old_records = directory.records
+        directory.records = []
+        for record in old_records:
+            if record != settings.extra_types:
+                directory.records.append(record)
+        force = True
 
-            directory.update_content()
+    if args.replace:
+        for extra_type in settings.extra_types:
+            shutil.rmtree(os.path.join(directory.full_path,
+                        extra_type),
+                        ignore_errors=True)
 
-            if args.force:
-                old_records = directory.records
-                directory.records = []
-                for record in old_records:
-                    if record != settings.extra_types:
-                        directory.records.append(record)
-                settings.force = True
+    if not os.path.isdir(settings.tmp_folder_root):
+        os.mkdir(settings.tmp_folder_root)
 
-            if args.replace:
-                for extra_type in settings.extra_types:
-                    shutil.rmtree(os.path.join(directory.full_path,
-                                extra_type),
-                                ignore_errors=True)
+    download_extra(directory, settings, settings.tmp_folder_root)
+    directory.save_record(settings.records)
 
-            if not os.path.isdir(tmp_folder_root):
-                os.mkdir(tmp_folder_root)
-
-            download_extra(directory, settings, tmp_folder_root)
-            directory.save_record(records)
-
-        except FileNotFoundError as e:
-
-            log.error('file not found: %s', e)
-            continue
-        except HTTPError:
-
-            log.error('You might have been flagged by google search. try again tomorrow.')
-            sys.exit()
-        except URLError:
-
-            log.error('you might have lost your internet connections. exiting')
-            sys.exit()
-        except timeout:
-
-            log.error('you might have lost your internet connections. exiting')
-            sys.exit()
-        except ConnectionResetError:
-
-            log.error('you might have lost your internet connections. exiting')
-            sys.exit()
-        except KeyboardInterrupt:
-
-            log.error('exiting! keyboard interrupt.')
-            sys.exit()
-
-
-
-default_config = configparser.ConfigParser()
-default_config.read(os.path.join(os.path.dirname(sys.argv[0]),'default_config.cfg'))
-tmp_folder_root = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
-extra_configs_directory = os.path.join(os.path.dirname(sys.argv[0]),'extra_configs')
-configs_content = os.listdir(extra_configs_directory)
-records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
-
-tmdb_api_url = 'https://api.themoviedb.org/3'
-tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
+settings = Settings()
 
 test_result = search_tmdb_by_title('star wars', 'movie')
 if test_result is None:
@@ -823,9 +752,9 @@ else:
         'please specify a directory (-d) to search extras for')
 
 try:
-    shutil.rmtree(tmp_folder_root, ignore_errors=True)
+    shutil.rmtree(settings.tmp_folder_root, ignore_errors=True)
 except FileNotFoundError:
     pass
-os.mkdir(tmp_folder_root)
+os.mkdir(settings.tmp_folder_root)
 
 sys.exit()
