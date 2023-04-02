@@ -661,12 +661,11 @@ def download_extra(record):
 def handle_directory():
     log.info('working on record: %s', args.directory)
 
-    try:
-        record_path = os.path.join(records, os.path.split(args.directory)[1] + ".json")
-        if not args.force and os.path.exists(record_path):
-            record = Record.load_record(record_path)
-        else:
-            record = Record(tmdb_id=args.tmdbid)
+    record_path = os.path.join(settings.records, os.path.split(args.directory)[1] + ".json")
+    if not args.force and os.path.exists(record_path):
+        record = Record.load_record(record_path)
+    else:
+        record = Record(tmdb_id=args.tmdbid)
 
     if record.tmdb_id is None:
         sys.exit()
