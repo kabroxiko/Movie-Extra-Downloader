@@ -463,7 +463,7 @@ class Record:
         self.update_all(tmdb_id=tmdb_id)
 
     @classmethod
-    def load_directory(cls, file_name):
+    def load_record(cls, file_name):
         with open(file_name, 'r', encoding='utf-8') as load_file:
             return Record(json_dict=json.load(load_file))
 
@@ -658,22 +658,16 @@ def download_extra(record):
         finder.move_videos(downloaded_videos_meta, tmp_folder)
 
 
-def handle_directory(folder):
-    log.info('working on record: %s', folder)
+def handle_directory():
+    log.info('working on record: %s', args.directory)
 
     try:
         if not args.force:
-            record = Record.load_directory(os.path.join(records, os.path.split(folder)[1] + ".json"))
+            record = Record.load_record(os.path.join(records, os.path.split(args.directory)[1] + ".json"))
         else:
-            if has_tmdb_key:
-                record = Record(tmdb_id=args.tmdbid)
-            else:
-                record = Record()
-    except FileNotFoundError:
-        if has_tmdb_key:
             record = Record(tmdb_id=args.tmdbid)
-        else:
-            record = Record()
+    except FileNotFoundError:
+        record = Record(tmdb_id=args.tmdbid)
 
     if record.tmdb_id is None:
         sys.exit()
@@ -703,20 +697,12 @@ def handle_directory(folder):
 
 settings = Settings()
 
-test_result = search_tmdb_by_title('star wars', 'movie')
-if test_result is None:
-    log.error('Warning: No working TMDB api key was specified.')
-    time.sleep(10)
-    has_tmdb_key = False
-else:
-    has_tmdb_key = True
-
 if not args.mediatype:
     log.error('please specify media type (-m) to search extras for')
     sys.exit(1)
 
 if args.directory:
-    handle_directory(args.directory)
+    handle_directory()
 else:
     log.error('please specify a directory (-d) to search extras for')
 
