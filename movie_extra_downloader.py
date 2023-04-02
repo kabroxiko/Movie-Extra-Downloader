@@ -57,16 +57,6 @@ elif 'radarr_eventtype' in os.environ:
     log.info('directory: %s', args.directory)
 
 
-def make_list_from_string(string, delimiter=',', remove_spaces_next_to_delimiter=True):
-    if remove_spaces_next_to_delimiter:
-        while ' ' + delimiter in string:
-            string = string.replace(' ' + delimiter, delimiter)
-        while delimiter + ' ' in string:
-            string = string.replace(delimiter + ' ', delimiter)
-
-    return string.split(delimiter)
-
-
 def get_keyword_list(string):
 
     ret = ' ' + get_clean_string(string).lower() + ' '
@@ -210,7 +200,7 @@ def retrieve_web_page(url, params, page_name='page'):
     return response
 
 
-def search_tmdb_by_id(tmdb_id, extra_types, limit):
+def search_tmdb_by_id(tmdb_id, extra_types):
     ret_url_list = []
     url = tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) + '/videos' \
         + '?api_key=' + tmdb_api_key \
@@ -241,7 +231,7 @@ def search_tmdb_by_id(tmdb_id, extra_types, limit):
         if extra_type is not None:
             ret_url_list.append({"extra_type": extra_type, "link": 'https://www.youtube.com/watch?v=' + data['key']})
 
-    return ret_url_list[:limit]
+    return ret_url_list
 
 
 def search_tmdb_by_title(title, mediatype):
@@ -261,10 +251,10 @@ class ExtraFinder:
 
     conn_errors = 0
 
-    def __init__(self, directory, extra_config):
+    def __init__(self, directory, settings):
 
         self.directory = directory
-        self.config = extra_config
+        self.config = settings
         self.complete = True
 
         self.youtube_videos = []
@@ -354,10 +344,8 @@ class ExtraFinder:
 
         url_list = []
 
-        limit = int(self.config.limit)
-
         if self.directory.tmdb_id:
-            urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_types, 100)
+            urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_types)
             log.debug('urls: %s', urls)
         else:
             log.error('tmdb_id is missing')
@@ -377,36 +365,6 @@ class ExtraFinder:
                     self.youtube_videos.append(video)
                     if not video['categories']:
                         self.play_trailers.append(video)
-
-    def order_results(self):
-
-        attribute_tuple = self.config.priority_order.split('_')
-        highest = attribute_tuple[0] == 'highest'
-        key = '_'.join(attribute_tuple[1:])
-
-        for youtube_video in self.youtube_videos:
-            if youtube_video[key] is None:
-                youtube_video[key] = 0
-
-        if highest:
-            self.youtube_videos = sorted(self.youtube_videos,
-                                         key=lambda x: x[key], reverse=True)
-        else:
-            self.youtube_videos = sorted(self.youtube_videos,
-                                         key=lambda x: x[key])
-
-        preferred_videos = []
-        not_preferred_channels = []
-
-        for youtube_video in self.youtube_videos:
-            if youtube_video['uploader'] in self.config.preferred_channels:
-                preferred_videos.append(youtube_video)
-            else:
-                not_preferred_channels.append(youtube_video)
-
-        self.youtube_videos = preferred_videos + not_preferred_channels
-        self.play_trailers = sorted(self.play_trailers, key=lambda x:
-                                    x['view_count'], reverse=True)
 
     def download_videos(self, tmp_file):
 
@@ -447,9 +405,6 @@ class ExtraFinder:
                         break
                     log.error('failed to download the video. retrying')
                     time.sleep(3)
-
-            if count >= self.config.videos_to_download:
-                break
 
         return downloaded_videos_meta
 
@@ -497,32 +452,15 @@ class ExtraFinder:
             record_file()
 
 
-class ExtraSettings:
-
+class Settings:
     def __init__(self, config_path):
-
         with codecs.open(config_path, 'r') as file_name:
             self.config = configparser.RawConfigParser()
             self.config.read_file(file_name)
 
-        self.extra_types =  json.loads(self.config['EXTRA_CONFIG'].get('extra_types'))
-        self.config_id = self.config['EXTRA_CONFIG'].get('config_id')
-        self.force = self.config['EXTRA_CONFIG'].getboolean('force')
-        self.limit = 17
-
-        self.last_resort_policy = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('last_resort_policy')
-
-        self.priority_order = self.config['PRIORITY_RULES'].get('order')
-        self.preferred_channels = make_list_from_string(self.config['PRIORITY_RULES'].get('preferred_channels', '').replace('\n', ''))
-
-        self.videos_to_download = self.config['DOWNLOADING_AND_POSTPROCESSING'].getint('videos_to_download', 1)
-        self.naming_scheme = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('naming_scheme')
-        self.youtube_dl_arguments = json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'].get('youtube_dl_arguments'))
-
-        self.skip_movies_with_existing_trailers = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_trailers', False)
-
-        self.skip_movies_with_existing_theme = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_theme', False)
-
+        self.extra_types =  json.loads(self.config['SETTINGS'].get('extra_types'))
+        self.force = self.config['SETTINGS'].getboolean('force')
+        self.youtube_dl_arguments = json.loads(self.config['SETTINGS'].get('youtube_dl_arguments'))
 
 def download_extra(directory, config, tmp_folder):
 
@@ -540,7 +478,6 @@ def download_extra(directory, config, tmp_folder):
 
         log.info(directory.name)
 
-        finder.order_results()
 
         for youtube_video in finder.youtube_videos:
             log.info('%s : %s (%s)',
@@ -803,64 +740,10 @@ def handle_directory(folder):
             if directory.tmdb_id is None:
                 sys.exit()
 
-            extra_config = ExtraSettings(os.path.join(extra_configs_directory, config))
+            settings = Settings(os.path.join(extra_configs_directory, config))
 
             if args.replace:
                 args.force = True
-
-            if extra_config.config_id in directory.completed_configs \
-                    and not args.force:
-                continue
-
-            if extra_config.skip_movies_with_existing_trailers \
-                    and not args.replace:
-                skip = False
-                for file_name in os.listdir(directory.full_path):
-                    if file_name.lower().endswith('trailer.mp4') \
-                            or file_name.lower().endswith('trailer.mkv'):
-                        skip = True
-                        break
-                if skip:
-                    log.info('movie already have a trailer. skipping.')
-                    directory.save_directory(records)
-                    continue
-                if os.path.isdir(os.path.join(directory.full_path, 'trailers')):
-                    for file_name in \
-                        os.listdir(os.path.join(directory.full_path, 'trailers')):
-                        if file_name.lower().endswith('.mp4') \
-                                or file_name.lower().endswith('.mkv'):
-                            skip = True
-                            break
-                    if skip:
-                        log.info('movie already have a trailer. skipping.')
-                        directory.save_directory(records)
-                        continue
-
-            if extra_config.skip_movies_with_existing_theme:
-                skip = False
-                for file_name in os.listdir(directory.full_path):
-                    if file_name.lower().endswith('theme.mp3') \
-                            or file_name.lower().endswith('theme.wma') \
-                            or file_name.lower().endswith('theme.flac'):
-                        skip = True
-                        break
-                if skip:
-                    log.info('movie already have a theme song. skipping.')
-                    directory.save_directory(records)
-                    continue
-                if os.path.isdir(os.path.join(directory.full_path,
-                                 'theme-music')):
-                    for file_name in \
-                        os.listdir(os.path.join(directory.full_path, 'theme-music')):
-                        if file_name.lower().endswith('.mp3') \
-                                or file_name.lower().endswith('.wma') \
-                                or file_name.lower().endswith('.flac'):
-                            skip = True
-                            break
-                    if skip:
-                        log.info('movie already have a theme song. skipping.')
-                        directory.save_directory(records)
-                        continue
 
             directory.update_content()
 
@@ -868,12 +751,12 @@ def handle_directory(folder):
                 old_records = directory.records
                 directory.records = []
                 for record in old_records:
-                    if record != extra_config.extra_types:
+                    if record != settings.extra_types:
                         directory.records.append(record)
-                extra_config.force = True
+                settings.force = True
 
             if args.replace:
-                for extra_type in extra_config.extra_types:
+                for extra_type in settings.extra_types:
                     # directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
                     shutil.rmtree(os.path.join(directory.full_path,
                                 extra_type),
@@ -884,8 +767,7 @@ def handle_directory(folder):
             if not os.path.isdir(tmp_folder_root):
                 os.mkdir(tmp_folder_root)
 
-            download_extra(directory, extra_config, tmp_folder_root)
-            directory.completed_configs.append(extra_config.config_id)
+            download_extra(directory, settings, tmp_folder_root)
             directory.save_directory(records)
 
         except FileNotFoundError as e:
