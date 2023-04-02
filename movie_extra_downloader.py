@@ -378,108 +378,6 @@ class ExtraFinder:
                     if not video['categories']:
                         self.play_trailers.append(video)
 
-    def apply_custom_filters(self):
-
-        def absolute():
-
-            minimum = filter_args[0] == 'min'
-            ret = []
-
-            for youtube_video in filtered_list:
-                if minimum:
-                    if youtube_video[key] >= limit_value:
-                        ret.append(youtube_video)
-                else:
-                    if youtube_video[key] <= limit_value:
-                        ret.append(youtube_video)
-            return ret
-
-        def relative():
-
-            minimum = filter_args[0] == 'min'
-            ret = []
-            max_value = float('-inf')
-
-            for youtube_video in filtered_list:
-                video_value = youtube_video[key]
-                if video_value > max_value:
-                    max_value = video_value
-
-            for youtube_video in filtered_list:
-                if minimum:
-                    if youtube_video[key] >= max_value * limit_value:
-                        ret.append(youtube_video)
-                else:
-                    if youtube_video[key] <= max_value * limit_value:
-                        ret.append(youtube_video)
-            return ret
-
-        def highest():
-            keep = filter_args[0] == 'keep'
-
-            ret = sorted(filtered_list, key=lambda x: x[key],
-                         reverse=True)
-
-            if keep:
-                if len(ret) > limit_value:
-                    ret = ret[:limit_value]
-            else:
-                if len(ret) > limit_value:
-                    ret = ret[limit_value:]
-                else:
-                    ret = []
-
-            return ret
-
-        def lowest():
-            keep = filter_args[0] == 'keep'
-
-            ret = sorted(filtered_list, key=lambda x: x[key])
-
-            if keep:
-                if len(ret) > limit_value:
-                    ret = ret[:limit_value]
-            else:
-                if len(ret) > limit_value:
-                    ret = ret[limit_value:]
-                else:
-                    ret = []
-
-            return ret
-
-        filtered_list = None
-
-        for filter_package in self.config.custom_filters:
-
-            filtered_list = list(self.youtube_videos)
-
-            for data in filter_package:
-                filter_args = data.split(':::')[0].split('_')
-                limit_value = float(data.split(':::')[1])
-                try:
-                    int(filter_args[-1])
-                except ValueError:
-                    key = '_'.join(filter_args[2:])
-                else:
-                    key = '_'.join(filter_args[2:-1])
-
-                if filter_args[1] == 'relative':
-                    filtered_list = relative()
-                if filter_args[1] == 'absolute':
-                    filtered_list = absolute()
-                if filter_args[1] == 'highest':
-                    filtered_list = highest()
-                if filter_args[1] == 'lowest':
-                    filtered_list = lowest()
-            if self.play_trailers and self.config.extra_types == 'trailers':
-                if len(filtered_list) + 1 >= self.config.break_limit:
-                    break
-            else:
-                if len(filtered_list) >= self.config.break_limit:
-                    break
-
-        self.youtube_videos = filtered_list
-
     def order_results(self):
 
         attribute_tuple = self.config.priority_order.split('_')
@@ -612,7 +510,6 @@ class ExtraSettings:
         self.force = self.config['EXTRA_CONFIG'].getboolean('force')
         self.limit = 17
 
-        self.custom_filters = self.get_custom_filters()
         self.last_resort_policy = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('last_resort_policy')
 
         self.priority_order = self.config['PRIORITY_RULES'].get('order')
@@ -625,39 +522,6 @@ class ExtraSettings:
         self.skip_movies_with_existing_trailers = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_trailers', False)
 
         self.skip_movies_with_existing_theme = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_theme', False)
-
-
-    def get_custom_filters(self):
-
-        ret = {}
-
-        for (option, value) in self.config['CUSTOM_FILTERS'].items():
-
-            if option == 'break_limit':
-                self.break_limit = int(value)
-                continue
-            if option == 'last_resort_policy':
-                self.last_resort_policy = value
-                continue
-
-            try:
-                index = int(option.split('_')[0])
-            except ValueError:
-                continue
-
-            if index not in ret:
-                ret[index] = []
-            try:
-                ret[index].append('_'.join(option.split('_')[1:])
-                                  + ':::' + value)
-            except ValueError:
-                continue
-
-        sorted_ret = []
-        for key in sorted(ret.keys()):
-            sorted_ret.append(ret[key])
-
-        return sorted_ret
 
 
 def download_extra(directory, config, tmp_folder):
@@ -676,7 +540,6 @@ def download_extra(directory, config, tmp_folder):
 
         log.info(directory.name)
 
-        finder.apply_custom_filters()
         finder.order_results()
 
         for youtube_video in finder.youtube_videos:
