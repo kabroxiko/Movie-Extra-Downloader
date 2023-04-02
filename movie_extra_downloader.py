@@ -22,41 +22,6 @@ import yt_dlp
 from _socket import timeout
 from requests import Request, Session
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-d', '--directory', help='directory to search extras for')
-parser.add_argument('-t', '--tmdbid', help='tmdb id to search extras for')
-parser.add_argument('-m', '--mediatype', help='media type to search extras for')
-parser.add_argument('-f', '--force', action='store_true', help='force scan the directories')
-parser.add_argument('-r', '--replace', action='store_true', help='remove and ban the existing extra')
-args = parser.parse_args()
-
-if args.directory and os.path.split(args.directory)[1] == '':
-    args.directory = os.path.split(args.directory)[0]
-
-# Setup logger
-
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
-log = logging.getLogger('med')
-
-# Retrieve Required Variables
-
-if os.environ.get('sonarr_eventtype') == 'Test':
-    log.info('Test Sonarr works')
-    sys.exit(0)
-elif os.environ.get('radarr_eventtype') == 'Test':
-    log.info('Test Radarr works')
-    sys.exit(0)
-elif 'sonarr_eventtype' in os.environ:
-    args.directory = os.environ.get('sonarr_series_path')
-    args.mediatype = 'tv'
-    log.info('directory: %s', args.directory)
-elif 'radarr_eventtype' in os.environ:
-    args.directory = os.environ.get('radarr_movie_path')
-    args.tmdbid = os.environ.get('radarr_movie_tmdbid')
-    args.mediatype = 'movie'
-    log.info('directory: %s', args.directory)
-
-
 def get_clean_string(string):
     ret = ' ' + string.lower() + ' '
 
@@ -154,7 +119,7 @@ def retrieve_web_page(url, params, page_name='page'):
 
 
 def search_tmdb_by_id(tmdb_id, extra_types):
-    url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) + '/videos' \
+    url = settings.tmdb_api_url + '/' + media_type + '/' + str(tmdb_id) + '/videos' \
         + '?api_key=' + settings.tmdb_api_key \
         + '&language=en-US'
     log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
@@ -187,8 +152,8 @@ def search_tmdb_by_id(tmdb_id, extra_types):
     return ret_url_list
 
 
-def search_tmdb_by_title(title, mediatype):
-    url = settings.tmdb_api_url + '/search/' + mediatype \
+def search_tmdb_by_title(title, media_type):
+    url = settings.tmdb_api_url + '/search/' + media_type \
         + '?api_key=' + settings.tmdb_api_key \
         + '&query=' + quote(title.encode('utf-8')) \
         + '&language=en-US&page=1&include_adult=false'
@@ -392,9 +357,10 @@ class Record:
 
     def __init__(self, tmdb_id=None, json_dict=None):
 
+        self.tmdb_id = None
         self.full_path = args.directory
         self.name = None
-        self.tmdb_id = None
+        self.media_type = None
         self.movie_title = None
         self.movie_original_title = None
         self.movie_release_year = None
@@ -426,7 +392,7 @@ class Record:
             return True
 
         def get_tmdb_details_data():
-            url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(self.record.tmdb_id) \
+            url = settings.tmdb_api_url + '/' + media_type + '/' + str(self.record.tmdb_id) \
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
             log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
@@ -459,7 +425,7 @@ class Record:
 
 
         def search_by_title():
-            search_data = search_tmdb_by_title(self.movie_title, args.mediatype)
+            search_data = search_tmdb_by_title(self.movie_title, media_type)
 
             if search_data is None or search_data['total_results'] == 0:
                 log.error('Nothing foung by title')
@@ -503,7 +469,7 @@ class Record:
                     movie_data = search_data['results'][0]
 
             self.tmdb_id = movie_data['id']
-            if args.mediatype == 'movie':
+            if media_type == 'movie':
                 self.movie_title = get_clean_string(movie_data['title'])
                 self.movie_original_title = get_clean_string(movie_data['original_title'])
                 if len((movie_data['release_date'])[:4]) == 4:
@@ -612,6 +578,42 @@ def handle_directory():
 
     download_extra(record)
     record.save_record(settings.record_folder)
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--directory', help='directory to search extras for')
+parser.add_argument('-t', '--tmdbid', help='tmdb id to search extras for')
+parser.add_argument('-m', '--mediatype', help='media type to search extras for')
+parser.add_argument('-f', '--force', action='store_true', help='force scan the directories')
+parser.add_argument('-r', '--replace', action='store_true', help='remove and ban the existing extra')
+args = parser.parse_args()
+
+if args.directory and os.path.split(args.directory)[1] == '':
+    args.directory = os.path.split(args.directory)[0]
+
+# Setup logger
+
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+log = logging.getLogger('med')
+
+# Retrieve Required Variables
+
+if os.environ.get('sonarr_eventtype') == 'Test':
+    log.info('Test Sonarr works')
+    sys.exit(0)
+elif os.environ.get('radarr_eventtype') == 'Test':
+    log.info('Test Radarr works')
+    sys.exit(0)
+elif 'sonarr_eventtype' in os.environ:
+    args.directory = os.environ.get('sonarr_series_path')
+    args.mediatype = 'tv'
+    log.info('directory: %s', args.directory)
+elif 'radarr_eventtype' in os.environ:
+    args.directory = os.environ.get('radarr_movie_path')
+    args.tmdbid = os.environ.get('radarr_movie_tmdbid')
+    args.mediatype = 'movie'
+    log.info('directory: %s', args.directory)
+
+media_type = args.mediatype
 
 settings = Settings()
 
