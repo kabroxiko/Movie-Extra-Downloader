@@ -400,7 +400,7 @@ class Record:
         self.movie_release_year = None
         self.extras = []
 
-        self.update_all(tmdb_id=tmdb_id)
+        self.update_all()
 
     @classmethod
     def load_record(cls, file_name):
@@ -408,13 +408,13 @@ class Record:
             return Record(json_dict=json.load(load_file))
 
 
-    def update_all(self, tmdb_id=None):
+    def update_all(self):
 
         self.name = os.path.split(args.directory)[1]
-        self.update_movie_info(tmdb_id)
+        self.update_movie_info()
 
 
-    def update_movie_info(self, tmdb_id=None):
+    def update_movie_info(self):
 
         def get_info_from_directory():
             clean_name_tuple = get_clean_string(self.name).split(' ')
@@ -429,8 +429,8 @@ class Record:
 
             return True
 
-        def get_tmdb_details_data(tmdb_id):
-            url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(tmdb_id) \
+        def get_tmdb_details_data():
+            url = settings.tmdb_api_url + '/' + args.mediatype + '/' + str(self.record.tmdb_id) \
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
             log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
@@ -441,7 +441,7 @@ class Record:
             return data
 
         def get_info_from_details():
-            details_data = get_tmdb_details_data(tmdb_id)
+            details_data = get_tmdb_details_data()
             if details_data is not None:
                 try:
                     self.tmdb_id = details_data['id']
@@ -523,7 +523,7 @@ class Record:
                     self.movie_release_year = None
             return True
 
-        if tmdb_id is not None:
+        if self.tmdb_id is not None:
             if get_info_from_details():
                 return True
 
