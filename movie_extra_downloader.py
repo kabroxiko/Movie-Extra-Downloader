@@ -611,7 +611,7 @@ class Record:
             json.dump(self.__dict__, save_file, indent = 4)
 
 
-def download_extra(record, settings):
+def download_extra(record):
     finder = ExtraFinder(record)
     log.info('processing: %s', record.name)
     finder.search()
