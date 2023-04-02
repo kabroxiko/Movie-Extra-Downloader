@@ -6,7 +6,6 @@ from bisect import bisect
 from datetime import date
 
 from urllib.parse import quote
-from requests import Request, Session
 from urllib.error import URLError, HTTPError
 
 import os
@@ -18,10 +17,10 @@ import time
 import shutil
 import codecs
 import json
-import traceback
 import hashlib
 import yt_dlp
 from _socket import timeout
+from requests import Request, Session
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--directory', help='directory to search extras for')
@@ -773,41 +772,6 @@ class ExtraFinder:
                 'extra_type': extra_type,
             })
 
-        def determine_case():
-            for (content_file, content_file_hash) in self.directory.content.items():
-                if content_file == file_name:
-                    return 'name_in_directory'
-                if file_hash == content_file_hash:
-                    return 'hash_in_directory'
-
-            for sub_content in self.directory.subdirectories.values():
-                for (content_file, content_file_hash) in sub_content.items():
-                    if content_file == file_name:
-                        return 'name_in_directory'
-                    if file_hash == content_file_hash:
-                        return 'hash_in_directory'
-
-            return ''
-
-        def handle_name_in_directory():
-            if self.config.force:
-                copy_file()
-                record_file()
-                self.directory.subdirectories[extra_type][file_name] = file_hash
-            else:
-                os.remove(source_path)
-
-        def handle_hash_in_directory():
-            if self.config.force:
-                copy_file()
-                record_file()
-                if self.config.extra_types in self.directory.subdirectories:
-                    self.directory.subdirectories[self.config.extra_types] = {file_name: file_hash}
-                else:
-                    self.directory.subdirectories = {self.config.extra_types: {file_name: file_hash}}
-            else:
-                os.remove(source_path)
-
         for file_name in os.listdir(tmp_folder):
             for video_meta in downloaded_videos_meta:
                 if video_meta['title'] in file_name.replace('\u29f8','\u002f') \
@@ -825,26 +789,9 @@ class ExtraFinder:
 
             file_hash = hash_file(source_path)
 
-            if any(file_hash == record['hash'] for record in self.directory.records):
-                os.remove(source_path)
-                continue
-
-            case = determine_case()
-
             log.debug('Moving file to %s folder', extra_type)
-            if case == 'name_in_directory':
-                handle_name_in_directory()
-            elif case == 'hash_in_directory':
-                handle_hash_in_directory()
-            else:
-                copy_file()
-
-                if extra_type in self.directory.subdirectories:
-                    self.directory.subdirectories[extra_type][file_name] = file_hash
-                else:
-                    self.directory.subdirectories = {extra_type: {file_name: file_hash}}
-
-                record_file()
+            copy_file()
+            record_file()
 
 
 class ExtraSettings:
