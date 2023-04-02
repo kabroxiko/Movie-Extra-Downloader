@@ -118,7 +118,7 @@ def retrieve_web_page(url, params, page_name='page'):
     return response
 
 
-def search_tmdb_by_id(tmdb_id, extra_types):
+def search_tmdb_by_id(tmdb_id, extra_types, media_type):
     url = settings.tmdb_api_url + '/' + media_type + '/' + str(tmdb_id) + '/videos' \
         + '?api_key=' + settings.tmdb_api_key \
         + '&language=en-US'
@@ -243,7 +243,7 @@ class ExtraFinder:
         url_list = []
 
         if self.record.tmdb_id:
-            urls = search_tmdb_by_id(self.record.tmdb_id, settings.extra_types)
+            urls = search_tmdb_by_id(self.record.tmdb_id, settings.extra_types, self.record.media_type)
             log.debug('urls: %s', urls)
         else:
             log.error('tmdb_id is missing')
@@ -359,11 +359,14 @@ class Record:
 
         self.tmdb_id = None
         self.full_path = args.directory
-        self.name = None
-        self.media_type = None
-        self.movie_title = None
-        self.movie_original_title = None
-        self.movie_release_year = None
+        self.media_type = args.mediatype
+        self.title = None
+        if self.media_type == 'movie':
+            self.original_title = None
+            self.release_date = None
+        else:
+            self.original_name = None
+            self.first_air_date = None
         self.extras = []
 
         self.update_all()
@@ -376,23 +379,33 @@ class Record:
 
     def update_all(self):
 
-        self.name = os.path.split(args.directory)[1]
+        self.title = os.path.split(args.directory)[1]
 
-        def get_info_from_directory():
-            clean_name_tuple = get_clean_string(self.name).split(' ')
+        def get_info_from_directory_name():
+            clean_name_tuple = get_clean_string(self.title).split(' ')
 
-            if len(clean_name_tuple) > 1 \
-                    and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
-                self.movie_release_year = int(clean_name_tuple[-1])
-                self.movie_title = ' '.join(clean_name_tuple[:-1])
+            if self.media_type == 'movie':
+                if len(clean_name_tuple) > 1 \
+                        and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
+                    self.release_date = int(clean_name_tuple[-1])
+                    self.title = ' '.join(clean_name_tuple[:-1])
+                else:
+                    self.release_date = None
+                    self.title = ' '.join(clean_name_tuple)
             else:
-                self.movie_release_year = None
-                self.movie_title = ' '.join(clean_name_tuple)
+                if len(clean_name_tuple) > 1 \
+                        and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
+                    self.first_air_date = int(clean_name_tuple[-1])
+                    self.title = ' '.join(clean_name_tuple[:-1])
+                else:
+                    self.first_air_date = None
+                    self.title = ' '.join(clean_name_tuple)
 
             return True
 
         def get_tmdb_details_data():
-            url = settings.tmdb_api_url + '/' + media_type + '/' + str(self.record.tmdb_id) \
+            log.debug('#######')
+            url = settings.tmdb_api_url + '/' + self.media_type + '/' + str(self.tmdb_id) \
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
             log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
@@ -406,14 +419,10 @@ class Record:
             details_data = get_tmdb_details_data()
             if details_data is not None:
                 try:
-                    self.tmdb_id = details_data['id']
-                    self.movie_title = details_data['title']
-                    self.movie_original_title = details_data['original_title']
-
                     if len((details_data['release_date'])[:4]) == 4:
-                        self.movie_release_year = int((details_data['release_date'])[:4])
+                        self.release_date = int((details_data['release_date'])[:4])
                     else:
-                        self.movie_release_year = None
+                        self.release_date = None
                     return True
                 except KeyError:
                     return False
@@ -425,7 +434,7 @@ class Record:
 
 
         def search_by_title():
-            search_data = search_tmdb_by_title(self.movie_title, media_type)
+            search_data = search_tmdb_by_title(self.title, self.media_type)
 
             if search_data is None or search_data['total_results'] == 0:
                 log.error('Nothing foung by title')
@@ -434,7 +443,8 @@ class Record:
             movie_data = None
             movie_backup_data = None
 
-            if self.movie_release_year is None:
+            if (self.media_type == 'movie' and self.release_date is None) \
+                 or (self.media_type == 'tv' and self.first_air_date is None):
                 movie_data = search_data['results'][0]
             else:
 
@@ -447,18 +457,18 @@ class Record:
                         data['release_date'] = '000000000000000'
                         continue
                     if movie_data is None:
-                        if str(self.movie_release_year) == (data['release_date'])[:4]:
+                        if str(self.release_date) == (data['release_date'])[:4]:
                             movie_data = data
                         elif (data['release_date'])[6:8] in ['09', '10', '11', '12'] \
-                                and str(self.movie_release_year - 1) == (data['release_date'])[:4]:
+                                and str(self.release_date - 1) == (data['release_date'])[:4]:
                             movie_data = data
                         elif (data['release_date'])[6:8] in ['01', '02', '03', '04'] \
-                                and str(self.movie_release_year + 1) == (data['release_date'])[:4]:
+                                and str(self.release_date + 1) == (data['release_date'])[:4]:
                             movie_data = data
                     elif movie_backup_data is None:
-                        if str(self.movie_release_year - 1) == (data['release_date'])[:4]:
+                        if str(self.release_date - 1) == (data['release_date'])[:4]:
                             movie_backup_data = data
-                        elif str(self.movie_release_year + 1) == (data['release_date'])[:4]:
+                        elif str(self.release_date + 1) == (data['release_date'])[:4]:
                             movie_backup_data = data
 
                 if movie_data is None and movie_backup_data is not None:
@@ -469,43 +479,43 @@ class Record:
                     movie_data = search_data['results'][0]
 
             self.tmdb_id = movie_data['id']
-            if media_type == 'movie':
-                self.movie_title = get_clean_string(movie_data['title'])
-                self.movie_original_title = get_clean_string(movie_data['original_title'])
+            if self.media_type == 'movie':
+                self.title = get_clean_string(movie_data['title'])
+                self.original_title = get_clean_string(movie_data['original_title'])
                 if len((movie_data['release_date'])[:4]) == 4:
-                    self.movie_release_year = int((movie_data['release_date'])[:4])
+                    self.release_date = int((movie_data['release_date'])[:4])
                 else:
-                    self.movie_release_year = None
+                    self.release_date = None
             else:
-                self.movie_title = get_clean_string(movie_data['name'])
-                self.movie_original_title = get_clean_string(movie_data['original_name'])
+                self.title = get_clean_string(movie_data['original_name'])
+                self.original_name = get_clean_string(movie_data['original_name'])
                 if len((movie_data['first_air_date'])[:4]) == 4:
-                    self.movie_release_year = int((movie_data['first_air_date'])[:4])
+                    self.first_air_date = int((movie_data['first_air_date'])[:4])
                 else:
-                    self.movie_release_year = None
+                    self.first_air_date = None
             return True
 
-        if self.tmdb_id is not None:
-            if get_info_from_details():
-                return True
-
-        if get_info_from_directory():
-            if search_by_title():
-                return True
-        else:
+        if not get_info_from_directory_name():
             return False
 
+        if not search_by_title():
+            return False
+
+        if not get_info_from_details():
+            return False
+
+        return True
 
     def save_record(self, save_path):
         if not os.path.isdir(save_path):
             os.mkdir(os.path.join(save_path))
-        with open(os.path.join(save_path, self.name + ".json"), 'w') as save_file:
+        with open(os.path.join(save_path, self.title + ".json"), 'w') as save_file:
             json.dump(self.__dict__, save_file, indent = 4)
 
 
 def download_extra(record):
     finder = ExtraFinder(record)
-    log.info('processing: %s', record.name)
+    log.info('processing: %s', record.title)
     finder.search()
 
     for youtube_video in finder.youtube_videos:
@@ -513,8 +523,7 @@ def download_extra(record):
         log.info('webpage_url: %s', youtube_video['webpage_url'])
         log.info('format: %s', youtube_video['format'])
 
-    log.info(record.name)
-
+    log.info(record.title)
 
     for youtube_video in finder.youtube_videos:
         log.info('%s : %s',
@@ -524,7 +533,7 @@ def download_extra(record):
         log.info('play trailer: %s : %s',
                 youtube_video['webpage_url'],
                 youtube_video['format'])
-    log.info('downloading for: %s', record.name)
+    log.info('downloading for: %s', record.title)
     count = 0
     tmp_folder = os.path.join(settings.tmp_folder_root, 'tmp_0')
     while True:
@@ -612,8 +621,6 @@ elif 'radarr_eventtype' in os.environ:
     args.tmdbid = os.environ.get('radarr_movie_tmdbid')
     args.mediatype = 'movie'
     log.info('directory: %s', args.directory)
-
-media_type = args.mediatype
 
 settings = Settings()
 
