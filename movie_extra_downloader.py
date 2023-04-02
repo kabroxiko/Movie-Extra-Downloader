@@ -748,8 +748,7 @@ if not args.mediatype:
 if args.directory:
     handle_directory(args.directory)
 else:
-    log.error(
-        'please specify a directory (-d) to search extras for')
+    log.error('please specify a directory (-d) to search extras for')
 
 try:
     shutil.rmtree(settings.tmp_folder_root, ignore_errors=True)
