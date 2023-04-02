@@ -243,21 +243,6 @@ class ExtraFinder:
             youtube_video['title'] = get_clean_string(youtube_video['title'])
             youtube_video['extra_type'] = url['extra_type']
 
-            if youtube_video['view_count'] is None:
-                youtube_video['view_count'] = 100
-
-            if youtube_video['view_count'] < 100:
-                youtube_video['view_count'] = 100
-
-            if youtube_video['average_rating'] is None:
-                youtube_video['average_rating'] = 0
-
-            if youtube_video['view_count'] is None:
-                youtube_video['view_count'] = 0
-
-            youtube_video['adjusted_rating'] = youtube_video['average_rating'] * \
-                (1 - 1 / (youtube_video['view_count'] / 60) ** 0.5)
-
             if youtube_video['width'] is None or youtube_video['height'] is None:
                 youtube_video['resolution_ratio'] = 1
                 youtube_video['resolution'] = 144
@@ -283,14 +268,10 @@ class ExtraFinder:
                     date_str = youtube_video['upload_date']
                     upload_date = date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]))
                     time_delta = date.today() - upload_date
-                    youtube_video['views_per_day'] = youtube_video['view_count'] / \
-                        (365 + time_delta.total_seconds() / 60 / 60 / 24)
                 else:
                     log.error('no "upload_date"!!!')
-                    youtube_video['views_per_day'] = 0
             else:
                 log.error('no "upload_date"!!!')
-                youtube_video['views_per_day'] = 0
 
             return youtube_video
 
@@ -568,18 +549,15 @@ def download_extra(record):
     for youtube_video in finder.youtube_videos:
         log.info('extra_type: %s', youtube_video['extra_type'])
         log.info('webpage_url: %s', youtube_video['webpage_url'])
-        log.info('adjusted_rating: %s', str(youtube_video['adjusted_rating']))
         log.info('format: %s', youtube_video['format'])
-        log.info('views_per_day: %s', str(youtube_video['views_per_day']))
 
     log.info(record.name)
 
 
     for youtube_video in finder.youtube_videos:
-        log.info('%s : %s (%s)',
+        log.info('%s : %s',
                 youtube_video['webpage_url'],
-                youtube_video['format'],
-                str(youtube_video['adjusted_rating']))
+                youtube_video['format'])
     for youtube_video in finder.play_trailers:
         log.info('play trailer: %s : %s',
                 youtube_video['webpage_url'],
