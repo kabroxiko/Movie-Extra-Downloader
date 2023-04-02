@@ -378,185 +378,6 @@ class ExtraFinder:
                     if not video['categories']:
                         self.play_trailers.append(video)
 
-    def filter_search_result(self):
-
-        filtered_candidates = []
-
-        for youtube_video in self.youtube_videos:
-
-            info = 'Video "' + youtube_video['webpage_url'] \
-                + '" was removed. reasons: '
-            append_video = True
-            log.info('duration: %s', youtube_video['duration'])
-
-            if youtube_video['duration'] >= 200:
-                info += 'long video, '
-                append_video = False
-                continue
-
-            for youtube_id in self.directory.banned_youtube_videos_id:
-                if youtube_id == youtube_video['id']:
-                    info += 'banned youtube video, '
-                    append_video = False
-                    break
-
-            try:
-                for year in self.directory.banned_years:
-                    if str(year) in youtube_video['title'].lower():
-                        append_video = False
-                        info += 'containing banned year in title, '
-                        break
-                    if any(str(year) in tag.lower() for tag in
-                           youtube_video['tags']):
-                        append_video = False
-                        info += 'containing banned year in tags, '
-                        break
-            except TypeError:
-                append_video = False
-                info += 'unable to confirm year not in (tag:TypeError), '
-
-            buffer = 0
-            if len(self.directory.banned_title_keywords) > 3:
-                buffer = 1
-            if len(self.directory.banned_title_keywords) > 10:
-                buffer = 2
-            for keyword in self.directory.banned_title_keywords:
-                if ' ' + keyword.lower() + ' ' in ' ' \
-                        + youtube_video['title'].lower() + ' ':
-                    buffer -= 1
-                    if buffer < 0:
-                        append_video = False
-                        info += \
-                            'containing banned similar title keywords, '
-                        break
-
-            if not any(phrase.lower() in youtube_video['title'].lower()
-                       for phrase in self.config.required_phrases):
-                append_video = False
-                info += 'not containing any required phrase, '
-
-            for phrase in self.config.banned_phrases:
-                if phrase.lower() in youtube_video['title'].lower():
-                    append_video = False
-                    info += 'containing a banned phrase, '
-                    break
-
-            for channel in self.config.banned_channels:
-                if channel.lower() == youtube_video['uploader'].lower():
-                    append_video = False
-                    info += 'made by a banned channel, '
-                    break
-
-            title_in_video = False
-            original_title_in_video = False
-
-            buffer = 0
-            if len(self.directory.movie_title_keywords) > 3:
-                buffer = 1
-            if len(self.directory.movie_title_keywords) > 7:
-                buffer = 2
-
-            for keyword in self.directory.movie_title_keywords:
-                if ' ' + keyword.lower() + ' ' not in ' ' \
-                        + youtube_video['title'].lower() + ' ':
-                    buffer -= 1
-                    if buffer < 0:
-                        break
-            else:
-                title_in_video = True
-
-            if self.directory.movie_original_title is not None:
-                buffer = \
-                    int(len(self.directory.movie_original_title_keywords)
-                        / 4 + 0.1)
-
-                for keyword in \
-                        self.directory.movie_original_title_keywords:
-                    if ' ' + keyword.lower() + ' ' not in ' ' \
-                            + youtube_video['title'].lower() + ' ':
-                        buffer -= 1
-                        if buffer < 0:
-                            break
-                else:
-                    original_title_in_video = True
-
-            if append_video:
-                filtered_candidates.append(youtube_video)
-            else:
-                log.info('%s.', info[:-2])
-
-        self.youtube_videos = filtered_candidates
-
-        filtered_candidates = []
-
-        for youtube_video in self.play_trailers:
-
-            info = 'Video "' + youtube_video['webpage_url'] + '" was removed. reasons: '
-            append_video = True
-
-            for year in self.directory.banned_years:
-                if str(year) in youtube_video['title'].lower():
-                    append_video = False
-                    info += 'containing banned year in title, '
-                    break
-                if any(str(year) in tag.lower() for tag in youtube_video['tags']):
-                    append_video = False
-                    info += 'containing banned year in tags, '
-                    break
-
-            buffer = 0
-            if len(self.directory.banned_title_keywords) > 3:
-                buffer = 1
-            if len(self.directory.banned_title_keywords) > 6:
-                buffer = 2
-            for keyword in self.directory.banned_title_keywords:
-                if ' ' + keyword.lower() + ' ' in ' ' \
-                        + youtube_video['title'].lower() + ' ':
-                    buffer -= 1
-                    if buffer < 0:
-                        append_video = False
-                        info += 'containing banned similar title keywords, '
-                        break
-
-            title_in_video = False
-            original_title_in_video = False
-
-            buffer = 0
-            if len(self.directory.movie_title_keywords) > 3:
-                buffer = 1
-            if len(self.directory.movie_title_keywords) > 7:
-                buffer = 2
-
-            for keyword in self.directory.movie_title_keywords:
-                if keyword.lower() not in youtube_video['title'].lower():
-                    buffer -= 1
-                    if buffer < 0:
-                        break
-            else:
-                title_in_video = True
-
-            if self.directory.movie_original_title is not None:
-                buffer = int(len(self.directory.movie_original_title_keywords) / 4 + 0.1)
-
-                for keyword in self.directory.movie_original_title_keywords:
-                    if keyword.lower() not in youtube_video['title'].lower():
-                        buffer -= 1
-                        if buffer < 0:
-                            break
-                else:
-                    original_title_in_video = True
-
-            if not original_title_in_video and not title_in_video:
-                append_video = False
-                info += 'not containing title, '
-
-            if append_video:
-                filtered_candidates.append(youtube_video)
-            else:
-                log.info('%s.', info[:-2])
-
-        self.play_trailers = filtered_candidates
-
     def apply_custom_filters(self):
 
         def absolute():
@@ -791,10 +612,6 @@ class ExtraSettings:
         self.force = self.config['EXTRA_CONFIG'].getboolean('force')
         self.limit = 17
 
-        self.required_phrases = make_list_from_string(self.config['FILTERING'].get('required_phrases').replace('\n', ''))
-        self.banned_phrases = make_list_from_string(self.config['FILTERING'].get('banned_phrases').replace('\n', ''))
-        self.banned_channels = make_list_from_string(self.config['FILTERING'].get('banned_channels').replace('\n', ''))
-
         self.custom_filters = self.get_custom_filters()
         self.last_resort_policy = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('last_resort_policy')
 
@@ -849,7 +666,6 @@ def download_extra(directory, config, tmp_folder):
         finder = ExtraFinder(directory, config)
         log.info('processing: %s', directory.name)
         finder.search()
-        finder.filter_search_result()
 
         for youtube_video in finder.youtube_videos:
             log.info('extra_type: %s', youtube_video['extra_type'])
