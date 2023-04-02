@@ -707,7 +707,7 @@ class Directory:
             return False
 
 
-    def save_directory(self, save_path):
+    def save_record(self, save_path):
         self.content = None
         self.subdirectories = None
         if not os.path.isdir(save_path):
@@ -757,18 +757,15 @@ def handle_directory(folder):
 
             if args.replace:
                 for extra_type in settings.extra_types:
-                    # directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
                     shutil.rmtree(os.path.join(directory.full_path,
                                 extra_type),
                                 ignore_errors=True)
-                    # os.mkdir(os.path.join(directory.full_path,
-                    #         extra_type))
 
             if not os.path.isdir(tmp_folder_root):
                 os.mkdir(tmp_folder_root)
 
             download_extra(directory, settings, tmp_folder_root)
-            directory.save_directory(records)
+            directory.save_record(records)
 
         except FileNotFoundError as e:
 
