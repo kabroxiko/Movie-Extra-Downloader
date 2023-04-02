@@ -57,39 +57,6 @@ elif 'radarr_eventtype' in os.environ:
     log.info('directory: %s', args.directory)
 
 
-def get_keyword_list(string):
-
-    ret = ' ' + get_clean_string(string).lower() + ' '
-    ret = (ret.replace(' the ', '')
-              .replace(' in ', '')
-              .replace(' a ', '')
-              .replace(' by ', '')
-              .replace(' for ', '')
-              .replace(' is ', '')
-              .replace(' am ', '')
-              .replace(' an ', '')
-              .replace(' in ', '')
-              .replace(' with ', '')
-              .replace(' from ', '')
-              .replace(' and ', '')
-              .replace(' movie ', '')
-              .replace(' trailer ', '')
-              .replace(' interview ', '')
-              .replace(' interviews ', '')
-              .replace(' scenes ', '')
-              .replace(' scene ', '')
-              .replace(' official ', '')
-              .replace(' hd ', '')
-              .replace(' hq ', '')
-              .replace(' lq ', '')
-              .replace(' 1080p ', '')
-              .replace(' 720p ', '')
-              .replace(' of ', ''))
-
-
-    return list(set(space_cleanup(ret).split(' ')))
-
-
 def get_clean_string(string):
     ret = ' ' + string.lower() + ' '
 
@@ -367,8 +334,8 @@ class ExtraFinder:
         count = 0
 
         for youtube_video in self.youtube_videos[:]:
-            if not settings.force:
-                for youtube_video_id in self.record.records:
+            if not args.force:
+                for youtube_video_id in self.record.extras:
                     if youtube_video_id == youtube_video['id']:
                         continue
 
@@ -405,11 +372,10 @@ class ExtraFinder:
             for meta in downloaded_videos_meta:
                 youtube_video_id = meta['id']
 
-            self.record.records.append({
+            self.record.extras.append({
                 'youtube_video_id': youtube_video_id,
-                'file_path': extra_type,
-                'file_name': file_name,
                 'extra_type': extra_type,
+                'file_name': file_name,
             })
 
         for file_name in os.listdir(tmp_folder):
@@ -422,10 +388,7 @@ class ExtraFinder:
                     extra_type = video_meta['extra_type']
                     break
             source_path = os.path.join(tmp_folder, file_name)
-            if settings.extra_types == 'theme-music':
-                target_path = os.path.join(self.record.full_path, 'theme.mp3')
-            else:
-                target_path = os.path.join(self.record.full_path, extra_type, file_name)
+            target_path = os.path.join(args.directory, extra_type, file_name)
 
             log.debug('Moving file to %s folder', extra_type)
             copy_file()
@@ -438,27 +401,23 @@ class Settings:
         default_config.read(os.path.join(os.path.dirname(sys.argv[0]),'default_config.cfg'))
 
         self.tmp_folder_root = os.path.join(os.path.dirname(sys.argv[0]), 'tmp')
-        self.records = os.path.join(os.path.dirname(sys.argv[0]), 'records')
+        self.record_folder = os.path.join(os.path.dirname(sys.argv[0]), 'records')
         self.tmdb_api_url = 'https://api.themoviedb.org/3'
         self.tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
         self.extra_types = json.loads(default_config.get('SETTINGS', 'extra_types'))
-        self.force = default_config.get('SETTINGS', 'force')
         self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
 
 class Record:
 
     def __init__(self, tmdb_id=None, json_dict=None):
 
+        self.full_path = args.directory
         self.name = None
-
         self.tmdb_id = None
         self.movie_title = None
         self.movie_original_title = None
-        self.movie_original_title_keywords = None
         self.movie_release_year = None
-        self.movie_title_keywords = []
-
-        self.records = []
+        self.extras = []
 
         self.update_all(tmdb_id=tmdb_id)
 
@@ -471,7 +430,6 @@ class Record:
     def update_all(self, tmdb_id=None):
 
         self.name = os.path.split(args.directory)[1]
-        self.full_path = args.directory
         self.update_movie_info(tmdb_id)
 
 
@@ -484,13 +442,9 @@ class Record:
                     and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
                 self.movie_release_year = int(clean_name_tuple[-1])
                 self.movie_title = ' '.join(clean_name_tuple[:-1])
-                self.movie_original_title = ' '.join(clean_name_tuple[:-1])
             else:
                 self.movie_release_year = None
                 self.movie_title = ' '.join(clean_name_tuple)
-                self.movie_original_title = ' '.join(clean_name_tuple)
-            self.movie_title_keywords = get_keyword_list(self.movie_title)
-            self.movie_original_title_keywords = get_keyword_list(self.movie_original_title)
 
             return True
 
@@ -512,8 +466,6 @@ class Record:
                     self.tmdb_id = details_data['id']
                     self.movie_title = details_data['title']
                     self.movie_original_title = details_data['original_title']
-                    self.movie_title_keywords = get_keyword_list(details_data['title'])
-                    self.movie_original_title_keywords = get_keyword_list(details_data['original_title'])
 
                     if len((details_data['release_date'])[:4]) == 4:
                         self.movie_release_year = int((details_data['release_date'])[:4])
@@ -577,8 +529,6 @@ class Record:
             if args.mediatype == 'movie':
                 self.movie_title = get_clean_string(movie_data['title'])
                 self.movie_original_title = get_clean_string(movie_data['original_title'])
-                self.movie_title_keywords = get_keyword_list(movie_data['title'])
-                self.movie_original_title_keywords = get_keyword_list(movie_data['original_title'])
                 if len((movie_data['release_date'])[:4]) == 4:
                     self.movie_release_year = int((movie_data['release_date'])[:4])
                 else:
@@ -586,7 +536,6 @@ class Record:
             else:
                 self.movie_title = get_clean_string(movie_data['name'])
                 self.movie_original_title = get_clean_string(movie_data['original_name'])
-                self.movie_title_keywords = get_keyword_list(movie_data['name'])
                 if len((movie_data['first_air_date'])[:4]) == 4:
                     self.movie_release_year = int((movie_data['first_air_date'])[:4])
                 else:
@@ -661,7 +610,7 @@ def download_extra(record):
 def handle_directory():
     log.info('working on record: %s', args.directory)
 
-    record_path = os.path.join(settings.records, os.path.split(args.directory)[1] + ".json")
+    record_path = os.path.join(settings.record_folder, os.path.split(args.directory)[1] + ".json")
     if not args.force and os.path.exists(record_path):
         record = Record.load_record(record_path)
     else:
@@ -674,24 +623,21 @@ def handle_directory():
         args.force = True
 
     if args.force:
-        old_records = record.records
-        record.records = []
-        for record in old_records:
+        record.extras = []
+        for record in record.extras:
             if record != settings.extra_types:
-                record.records.append(record)
-        force = True
+                record.extras.append(record)
 
     if args.replace:
         for extra_type in settings.extra_types:
-            shutil.rmtree(os.path.join(record.full_path,
-                        extra_type),
-                        ignore_errors=True)
+            shutil.rmtree(os.path.join(args.directory, extra_type),
+                          ignore_errors=True)
 
     if not os.path.isdir(settings.tmp_folder_root):
         os.mkdir(settings.tmp_folder_root)
 
     download_extra(record)
-    record.save_record(settings.records)
+    record.save_record(settings.record_folder)
 
 settings = Settings()
 
