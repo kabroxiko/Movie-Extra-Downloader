@@ -67,18 +67,6 @@ def make_list_from_string(string, delimiter=',', remove_spaces_next_to_delimiter
     return string.split(delimiter)
 
 
-def apply_query_template(template, keys):
-    ret = template
-    for (key, value) in keys.items():
-        if isinstance(value, str):
-            ret = ret.replace('{' + key + '}', value)
-        elif isinstance(value, int):
-            ret = ret.replace('{' + key + '}', str(value))
-        elif isinstance(value, float):
-            ret = ret.replace('{' + key + '}', str(value))
-
-    return space_cleanup(ret)
-
 def get_keyword_list(string):
 
     ret = ' ' + get_clean_string(string).lower() + ' '
@@ -366,20 +354,16 @@ class ExtraFinder:
 
         url_list = []
 
-        for (search_index, search) in self.config.searches.items():
-            query = apply_query_template(search['query'],
-                                         self.directory.__dict__)
-            limit = int(search['limit'])
+        limit = int(self.config.limit)
 
-            if self.directory.tmdb_id:
-                urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_types, 100)
-                log.debug('urls: %s', urls)
-            else:
-                log.error('tmdb_id is missing')
-                continue
+        if self.directory.tmdb_id:
+            urls = search_tmdb_by_id(self.directory.tmdb_id, self.config.extra_types, 100)
+            log.debug('urls: %s', urls)
+        else:
+            log.error('tmdb_id is missing')
 
-            if urls:
-                url_list += urls
+        if urls:
+            url_list += urls
 
         for url in url_list:
             if not any(url['link'] in youtube_video['webpage_url']
@@ -802,11 +786,10 @@ class ExtraSettings:
             self.config = configparser.RawConfigParser()
             self.config.read_file(file_name)
 
-        self.extra_types = self.config['EXTRA_CONFIG'].get('extra_types')
+        self.extra_types =  json.loads(self.config['EXTRA_CONFIG'].get('extra_types'))
         self.config_id = self.config['EXTRA_CONFIG'].get('config_id')
         self.force = self.config['EXTRA_CONFIG'].getboolean('force')
-
-        self.searches = self.get_searches()
+        self.limit = 17
 
         self.required_phrases = make_list_from_string(self.config['FILTERING'].get('required_phrases').replace('\n', ''))
         self.banned_phrases = make_list_from_string(self.config['FILTERING'].get('banned_phrases').replace('\n', ''))
@@ -822,28 +805,10 @@ class ExtraSettings:
         self.naming_scheme = self.config['DOWNLOADING_AND_POSTPROCESSING'].get('naming_scheme')
         self.youtube_dl_arguments = json.loads(self.config['DOWNLOADING_AND_POSTPROCESSING'].get('youtube_dl_arguments'))
 
-        self.disable_play_trailers = self.config['EXTRA_CONFIG'].getboolean('disable_play_trailers', False)
-        self.only_play_trailers = self.config['EXTRA_CONFIG'].getboolean('only_play_trailers', False)
         self.skip_movies_with_existing_trailers = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_trailers', False)
 
         self.skip_movies_with_existing_theme = self.config['EXTRA_CONFIG'].getboolean('skip_movies_with_existing_theme', False)
 
-    def get_searches(self):
-
-        ret = {}
-
-        for (option, value) in self.config['SEARCHES'].items():
-
-            try:
-                index = int(option.split('_')[-1])
-            except ValueError:
-                continue
-
-            if index not in ret:
-                ret[index] = {}
-            ret[index]['_'.join(option.split('_')[:-1])] = value
-
-        return ret
 
     def get_custom_filters(self):
 
@@ -898,26 +863,6 @@ def download_extra(directory, config, tmp_folder):
         finder.apply_custom_filters()
         finder.order_results()
 
-        if finder.play_trailers and finder.youtube_videos \
-                and not config.disable_play_trailers:
-            if 'duration' in finder.youtube_videos[0] \
-                    and 'duration' in finder.play_trailers[0]:
-                if finder.youtube_videos[0]['duration'] - 23 \
-                    <= finder.play_trailers[0]['duration'] \
-                        <= finder.youtube_videos[0]['duration'] + 5:
-                    finder.youtube_videos = [finder.play_trailers[0]] + finder.youtube_videos
-                    log.info('picked play trailer.')
-
-        if config.only_play_trailers:
-            if finder.play_trailers:
-                finder.youtube_videos = [finder.play_trailers[0]]
-            else:
-                return
-
-        if not finder.youtube_videos and finder.play_trailers \
-                and not config.disable_play_trailers:
-            finder.youtube_videos = finder.play_trailers
-
         for youtube_video in finder.youtube_videos:
             log.info('%s : %s (%s)',
                     youtube_video['webpage_url'],
@@ -952,7 +897,7 @@ def download_extra(directory, config, tmp_folder):
         # Actually move files
         if downloaded_videos_meta:
             finder.move_videos(downloaded_videos_meta, tmp_folder)
-            if youtube_video['extra_type'] in config.extra_types.lower():
+            if youtube_video['extra_type'] in [e.lower() for e in config.extra_types]:
                 directory.trailer_youtube_video_id = downloaded_videos_meta[0]['id']
 
     process(tmp_folder)
@@ -1249,12 +1194,13 @@ def handle_directory(folder):
                 extra_config.force = True
 
             if args.replace:
-                directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
-                shutil.rmtree(os.path.join(directory.full_path,
-                              extra_config.extra_types),
-                              ignore_errors=True)
-                os.mkdir(os.path.join(directory.full_path,
-                         extra_config.extra_types))
+                for extra_type in extra_config.extra_types:
+                    # directory.banned_youtube_videos_id.append(directory.trailer_youtube_video_id)
+                    shutil.rmtree(os.path.join(directory.full_path,
+                                extra_type),
+                                ignore_errors=True)
+                    # os.mkdir(os.path.join(directory.full_path,
+                    #         extra_type))
 
             if not os.path.isdir(tmp_folder_root):
                 os.mkdir(tmp_folder_root)
