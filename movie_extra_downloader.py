@@ -15,15 +15,13 @@ import configparser
 import argparse
 import time
 import shutil
-import codecs
 import json
-import hashlib
 import yt_dlp
 from _socket import timeout
 from requests import Request, Session
 
 def get_clean_string(string):
-    ret = ' ' + string.lower() + ' '
+    ret = string
 
     ret = (ret.replace('(', '')
               .replace(')', '')
@@ -63,21 +61,17 @@ def get_clean_string(string):
         else:
             ret_count += len(ret_tup[ret_tup_count]) + 1
 
-    return space_cleanup(ret)
-
-
-def space_cleanup(string):
-    ret = string
     while '  ' in ret:
         ret = ret.replace('  ', ' ')
     while ret.endswith(' '):
         ret = ret[:-1]
     while ret.startswith(' '):
         ret = ret[1:]
+
     return ret
 
 
-def retrieve_web_page(url, params, page_name='page'):
+def retrieve_web_page(url, page_name='page'):
 
     session = Session()
     response = None
@@ -152,19 +146,6 @@ def search_tmdb_by_id(tmdb_id, extra_types, media_type):
     return ret_url_list
 
 
-def search_tmdb_by_title(title, media_type):
-    url = settings.tmdb_api_url + '/search/' + media_type \
-        + '?api_key=' + settings.tmdb_api_key \
-        + '&query=' + quote(title.encode('utf-8')) \
-        + '&language=en-US&page=1&include_adult=false'
-    log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
-    response = retrieve_web_page(url, 'tmdb movie search page')
-    data = json.loads(response.text)
-    response.close()
-
-    return data
-
-
 class ExtraFinder:
 
     conn_errors = 0
@@ -191,6 +172,10 @@ class ExtraFinder:
                             youtube_info = ydl.extract_info(url['link'], download=False)
                             break
                     except yt_dlp.DownloadError as e:
+                        if 'This video is not available' in e.args[0] \
+                                or 'The uploader has not made this video available in your country' in e.args[0] \
+                                or 'Private video' in e.args[0]:
+                            break
                         if 'ERROR: Unable to download webpage:' in e.args[0]:
                             if tries > 3:
                                 log.error('hey, there: error!!!')
@@ -203,6 +188,11 @@ class ExtraFinder:
             youtube_video = get_video_data()
 
             if not youtube_video:
+                return None
+
+            log.debug('duration: %s', youtube_video['duration'])
+            if youtube_video['duration'] >= settings.max_length:
+                log.debug('This video is longer than %s: %s', settings.max_length, youtube_video['title'])
                 return None
 
             youtube_video['title'] = get_clean_string(youtube_video['title'])
@@ -228,28 +218,15 @@ class ExtraFinder:
 
                 youtube_video['resolution'] = resolutions[bisect(resolutions, resolution * 1.2) - 1]
 
-            if youtube_video['upload_date']:
-                if youtube_video['upload_date'] is not None:
-                    date_str = youtube_video['upload_date']
-                    upload_date = date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:8]))
-                    time_delta = date.today() - upload_date
-                else:
-                    log.error('no "upload_date"!!!')
-            else:
-                log.error('no "upload_date"!!!')
-
             return youtube_video
 
         url_list = []
 
         if self.record.tmdb_id:
-            urls = search_tmdb_by_id(self.record.tmdb_id, settings.extra_types, self.record.media_type)
-            log.debug('urls: %s', urls)
+            url_list += search_tmdb_by_id(self.record.tmdb_id, settings.extra_types, self.record.media_type)
+            log.debug('urls: %s', url_list)
         else:
             log.error('tmdb_id is missing')
-
-        if urls:
-            url_list += urls
 
         for url in url_list:
             if not any(url['link'] in youtube_video['webpage_url']
@@ -350,12 +327,13 @@ class Settings:
         self.record_folder = os.path.join(os.path.dirname(sys.argv[0]), 'records')
         self.tmdb_api_url = 'https://api.themoviedb.org/3'
         self.tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
+        self.max_length = 200
         self.extra_types = json.loads(default_config.get('SETTINGS', 'extra_types'))
         self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
 
 class Record:
 
-    def __init__(self, tmdb_id=None, json_dict=None):
+    def __init__(self):
 
         self.tmdb_id = None
         self.full_path = args.directory
@@ -374,7 +352,7 @@ class Record:
     @classmethod
     def load_record(cls, file_name):
         with open(file_name, 'r', encoding='utf-8') as load_file:
-            return Record(json_dict=json.load(load_file))
+            return Record()
 
 
     def update_all(self):
@@ -404,7 +382,6 @@ class Record:
             return True
 
         def get_tmdb_details_data():
-            log.debug('#######')
             url = settings.tmdb_api_url + '/' + self.media_type + '/' + str(self.tmdb_id) \
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
@@ -433,8 +410,15 @@ class Record:
                 return False
 
 
-        def search_by_title():
-            search_data = search_tmdb_by_title(self.title, self.media_type)
+        def search_tmdb_by_title():
+            url = settings.tmdb_api_url + '/search/' + self.media_type \
+                + '?api_key=' + settings.tmdb_api_key \
+                + '&query=' + quote(self.title.encode('utf-8')) \
+                + '&language=en-US&page=1&include_adult=false'
+            log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
+            response = retrieve_web_page(url, 'tmdb movie search page')
+            search_data = json.loads(response.text)
+            response.close()
 
             if search_data is None or search_data['total_results'] == 0:
                 log.error('Nothing foung by title')
@@ -498,7 +482,7 @@ class Record:
         if not get_info_from_directory_name():
             return False
 
-        if not search_by_title():
+        if not search_tmdb_by_title():
             return False
 
         if not get_info_from_details():
@@ -509,7 +493,7 @@ class Record:
     def save_record(self, save_path):
         if not os.path.isdir(save_path):
             os.mkdir(os.path.join(save_path))
-        with open(os.path.join(save_path, self.title + ".json"), 'w') as save_file:
+        with open(os.path.join(save_path, os.path.split(args.directory)[1] + ".json"), 'w') as save_file:
             json.dump(self.__dict__, save_file, indent = 4)
 
 
@@ -563,7 +547,7 @@ def handle_directory():
     if not args.force and os.path.exists(record_path):
         record = Record.load_record(record_path)
     else:
-        record = Record(tmdb_id=args.tmdbid)
+        record = Record()
 
     if record.tmdb_id is None:
         sys.exit()
