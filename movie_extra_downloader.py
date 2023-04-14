@@ -56,7 +56,9 @@ def get_clean_string(string):
         if len(ret_tup[ret_tup_count]) == 1 \
                 and len(ret_tup[ret_tup_count + 1]) == 1:
             ret_count += 1
-            ret = ret[:ret_count] + ret[ret_count:ret_count + 1].replace(' ', '.') + ret[ret_count + 1:]
+            ret = ret[:ret_count] \
+                + ret[ret_count:ret_count + 1].replace(' ', '.') \
+                    + ret[ret_count + 1:]
             ret_count += 1
         else:
             ret_count += len(ret_tup[ret_tup_count]) + 1
@@ -135,13 +137,15 @@ def search_tmdb_by_id(tmdb_id, extra_types, media_type):
             extra_type = 'Featurettes'
         elif ('Scenes' in extra_types and data['type'] == 'Clip'):
             extra_type = 'Scenes'
-        elif ('Trailers' in extra_types and (data['type'] == 'Trailer' or data['type'] == 'Teaser')):
+        elif ('Trailers' in extra_types and (data['type'] == 'Trailer'
+                                          or data['type'] == 'Teaser')):
             extra_type = 'Trailers'
         elif ('Others' in extra_types and data['type'] == 'Bloopers'):
             extra_type = 'Others'
 
         if extra_type is not None:
-            ret_url_list.append({"extra_type": extra_type, "link": 'https://www.youtube.com/watch?v=' + data['key']})
+            ret_url_list.append({"extra_type": extra_type,
+                                 "link": 'https://www.youtube.com/watch?v=' + data['key']})
 
     return ret_url_list
 
@@ -173,8 +177,9 @@ class ExtraFinder:
                             break
                     except yt_dlp.DownloadError as error:
                         if 'This video is not available' in error.args[0] \
-                                or 'The uploader has not made this video available in your country' in error.args[0] \
-                                or 'Private video' in error.args[0]:
+                            or 'The uploader has not made this video available in your country' \
+                                in error.args[0] \
+                            or 'Private video' in error.args[0]:
                             break
                         if 'ERROR: Unable to download webpage:' in error.args[0]:
                             if tries > 3:
@@ -192,7 +197,9 @@ class ExtraFinder:
 
             log.debug('duration: %s', youtube_video['duration'])
             if youtube_video['duration'] >= settings.max_length:
-                log.debug('This video is longer than %s: %s', settings.max_length, youtube_video['title'])
+                log.debug('This video is longer than %s: %s',
+                                    settings.max_length,
+                                    youtube_video['title'])
                 return None
 
             youtube_video['title'] = get_clean_string(youtube_video['title'])
@@ -223,7 +230,9 @@ class ExtraFinder:
         url_list = []
 
         if self.record.tmdb_id:
-            url_list += search_tmdb_by_id(self.record.tmdb_id, settings.extra_types, self.record.media_type)
+            url_list += search_tmdb_by_id(self.record.tmdb_id,
+                                          settings.extra_types,
+                                          self.record.media_type)
             log.debug('urls: %s', url_list)
         else:
             log.error('tmdb_id is missing')
@@ -329,7 +338,8 @@ class Settings:
         self.tmdb_api_key = default_config.get('SETTINGS', 'tmdb_api_key')
         self.max_length = 200
         self.extra_types = json.loads(default_config.get('SETTINGS', 'extra_types'))
-        self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS', 'youtube_dl_arguments'))
+        self.youtube_dl_arguments = json.loads(default_config.get('SETTINGS',
+                                                    'youtube_dl_arguments'))
 
 class Record:
 
@@ -363,7 +373,8 @@ class Record:
 
             if self.media_type == 'movie':
                 if len(clean_name_tuple) > 1 \
-                        and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
+                        and any(clean_name_tuple[-1] == str(year) \
+                            for year in range(1896, date.today().year + 2)):
                     self.release_date = int(clean_name_tuple[-1])
                     self.title = ' '.join(clean_name_tuple[:-1])
                 else:
@@ -371,7 +382,8 @@ class Record:
                     self.title = ' '.join(clean_name_tuple)
             else:
                 if len(clean_name_tuple) > 1 \
-                        and any(clean_name_tuple[-1] == str(year) for year in range(1896, date.today().year + 2)):
+                        and any(clean_name_tuple[-1] == str(year) \
+                            for year in range(1896, date.today().year + 2)):
                     self.first_air_date = int(clean_name_tuple[-1])
                     self.title = ' '.join(clean_name_tuple[:-1])
                 else:
@@ -451,7 +463,8 @@ class Record:
                             movie_backup_data = data
 
                 if movie_data is None and movie_backup_data is not None:
-                    log.info( 'None of the search results had a correct release year, picking the next best result')
+                    log.info( 'None of the search results had a correct" \
+                        + "release year, picking the next best result')
                     movie_data = movie_backup_data
 
                 if movie_data is None:
@@ -488,7 +501,8 @@ class Record:
     def save_record(self, save_path):
         if not os.path.isdir(save_path):
             os.mkdir(os.path.join(save_path))
-        with open(os.path.join(save_path, os.path.split(args.directory)[1] + ".json"), 'w') as save_file:
+        with open(os.path.join(save_path, os.path.split(args.directory)[1] + ".json"),
+                'w', encoding="utf-8") as save_file:
             json.dump(self.__dict__, save_file, indent = 4)
 
 
@@ -547,19 +561,11 @@ def handle_directory():
     if record.tmdb_id is None:
         sys.exit()
 
-    if args.replace:
-        args.force = True
-
     if args.force:
         record.extras = []
         for record in record.extras:
             if record != settings.extra_types:
                 record.extras.append(record)
-
-    if args.replace:
-        for extra_type in settings.extra_types:
-            shutil.rmtree(os.path.join(args.directory, extra_type),
-                          ignore_errors=True)
 
     if not os.path.isdir(settings.tmp_folder_root):
         os.mkdir(settings.tmp_folder_root)
@@ -572,7 +578,6 @@ parser.add_argument('-d', '--directory', help='directory to search extras for')
 parser.add_argument('-t', '--tmdbid', help='tmdb id to search extras for')
 parser.add_argument('-m', '--mediatype', help='media type to search extras for')
 parser.add_argument('-f', '--force', action='store_true', help='force scan the directories')
-parser.add_argument('-r', '--replace', action='store_true', help='remove and ban the existing extra')
 args = parser.parse_args()
 
 if args.directory and os.path.split(args.directory)[1] == '':
