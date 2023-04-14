@@ -83,9 +83,9 @@ def retrieve_web_page(url, page_name='page'):
             prepped = session.prepare_request(request)
             response = session.send(prepped, timeout=2)
             break
-        except UnicodeEncodeError as e:
+        except UnicodeEncodeError as error:
 
-            log.error('Failed to download %s : %s. Skipping.', page_name, e)
+            log.error('Failed to download %s : %s. Skipping.', page_name, error)
             break
         except timeout:
 
@@ -94,11 +94,11 @@ def retrieve_web_page(url, page_name='page'):
                 break
 
             time.sleep(1)
-            log.error('Failed to download %s : %s : timed out. Retrying.', page_name, e)
+            log.error('Failed to download %s : %s : timed out. Retrying.', page_name, error)
 
-        except HTTPError as e:
+        except HTTPError as error:
 
-            log.error('Failed to download %s : %s. Skipping.', page_name, e)
+            log.error('Failed to download %s : %s. Skipping.', page_name, error)
             break
         except URLError:
 
@@ -171,12 +171,12 @@ class ExtraFinder:
                                                'logger': log}) as ydl:
                             youtube_info = ydl.extract_info(url['link'], download=False)
                             break
-                    except yt_dlp.DownloadError as e:
-                        if 'This video is not available' in e.args[0] \
-                                or 'The uploader has not made this video available in your country' in e.args[0] \
-                                or 'Private video' in e.args[0]:
+                    except yt_dlp.DownloadError as error:
+                        if 'This video is not available' in error.args[0] \
+                                or 'The uploader has not made this video available in your country' in error.args[0] \
+                                or 'Private video' in error.args[0]:
                             break
-                        if 'ERROR: Unable to download webpage:' in e.args[0]:
+                        if 'ERROR: Unable to download webpage:' in error.args[0]:
                             if tries > 3:
                                 log.error('hey, there: error!!!')
                                 raise
@@ -271,10 +271,10 @@ class ExtraFinder:
                         downloaded_videos_meta.append(meta)
                         count += 1
                         break
-                except yt_dlp.DownloadError as e:
+                except yt_dlp.DownloadError as error:
 
                     if tries > 3:
-                        if str(e).startswith('ERROR: Did not get any data blocks'):
+                        if str(error).startswith('ERROR: Did not get any data blocks'):
                             return None
                         log.error('failed to download the video.')
                         break
@@ -351,7 +351,7 @@ class Record:
 
     @classmethod
     def load_record(cls, file_name):
-        with open(file_name, 'r', encoding='utf-8') as load_file:
+        with open(file_name, 'r', encoding='utf-8'):
             return Record()
 
 
