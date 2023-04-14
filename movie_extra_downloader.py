@@ -336,7 +336,6 @@ class Record:
     def __init__(self):
 
         self.tmdb_id = None
-        self.full_path = args.directory
         self.media_type = args.mediatype
         self.title = None
         if self.media_type == 'movie':
@@ -387,13 +386,9 @@ class Record:
                 + '&language=en-US'
             log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
             response = retrieve_web_page(url, 'tmdb media details')
-            data = json.loads(response.text)
+            details_data = json.loads(response.text)
             response.close()
 
-            return data
-
-        def get_info_from_details():
-            details_data = get_tmdb_details_data()
             if details_data is not None:
                 try:
                     if len((details_data['release_date'])[:4]) == 4:
@@ -485,7 +480,7 @@ class Record:
         if not search_tmdb_by_title():
             return False
 
-        if not get_info_from_details():
+        if not get_tmdb_details_data():
             return False
 
         return True
