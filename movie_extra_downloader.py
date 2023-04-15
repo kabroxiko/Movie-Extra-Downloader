@@ -608,7 +608,7 @@ if args.directory and os.path.split(args.directory)[1] == '':
 
 # Setup logger
 
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 log = logging.getLogger('med')
 
 # Retrieve Required Variables
