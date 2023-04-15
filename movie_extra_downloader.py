@@ -16,9 +16,12 @@ import argparse
 import time
 import shutil
 import json
+import subprocess
 import yt_dlp
 from _socket import timeout
 from requests import Request, Session
+from cleanit import Config, Subtitle
+
 
 def get_clean_string(string):
     ret = string
@@ -118,7 +121,7 @@ def search_tmdb_by_id(tmdb_id, extra_types, media_type):
     url = settings.tmdb_api_url + '/' + media_type + '/' + str(tmdb_id) + '/videos' \
         + '?api_key=' + settings.tmdb_api_key \
         + '&language=en-US'
-    log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
+    log.debug('url: %s', url.replace(settings.tmdb_api_key, '[masked]'))
     response = retrieve_web_page(url, 'tmdb media videos')
     data = json.loads(response.text)
     response.close()
@@ -144,8 +147,8 @@ def search_tmdb_by_id(tmdb_id, extra_types, media_type):
             extra_type = 'Others'
 
         if extra_type is not None:
-            ret_url_list.append({"extra_type": extra_type,
-                                 "link": 'https://www.youtube.com/watch?v=' + data['key']})
+            ret_url_list.append({'extra_type': extra_type, \
+                                 'link': 'https://www.youtube.com/watch?v=' + data['key']})
 
     return ret_url_list
 
@@ -275,7 +278,7 @@ class ExtraFinder:
                 try:
                     with yt_dlp.YoutubeDL(arguments) as ydl:
                         info = ydl.extract_info(youtube_video['webpage_url'])
-                        info["extra_type"] = youtube_video['extra_type']
+                        info['extra_type'] = youtube_video['extra_type']
                         meta = ydl.sanitize_info(info)
                         downloaded_videos_meta.append(meta)
                         count += 1
@@ -294,10 +297,30 @@ class ExtraFinder:
 
     def move_videos(self, downloaded_videos_meta, tmp_folder):
 
-        def copy_file():
+        def clean_subtitle():
+            # Ruta del archivo MKV
+            subtitle_file = 'sub.srt'
+
+            # Extraer los subtítulos del archivo MKV
+            subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error',
+                            '-y', '-i', source_path, '-c:s', 'srt', subtitle_file])
+
+            # Limpiar los comentarios del archivo de subtítulos
+            sub = Subtitle(subtitle_file)
+            cfg = Config.from_path('/scripts/cleanit/config.yml')
+            rules = cfg.select_rules(tags={'no-spam', 'default'})
+            if sub.clean(rules):
+                sub.save()
+
             if not os.path.isdir(os.path.split(target_path)[0]):
                 os.mkdir(os.path.split(target_path)[0])
-            shutil.move(source_path, target_path)
+
+            # Regenerar el archivo MKV con los subtítulos limpios
+            subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error',
+                            '-y', '-i', source_path, '-i', subtitle_file,
+                            '-map', '0', '-map', '-0:s', '-map', '1', '-c', 'copy',
+                            '-metadata:s:s:0', 'language=spa', target_path])
+
 
         def record_file():
             youtube_video_id = 'unknown'
@@ -323,7 +346,7 @@ class ExtraFinder:
             target_path = os.path.join(args.directory, extra_type, file_name)
 
             log.debug('Moving file to %s folder', extra_type)
-            copy_file()
+            clean_subtitle()
             record_file()
 
 
@@ -396,7 +419,7 @@ class Record:
             url = settings.tmdb_api_url + '/' + self.media_type + '/' + str(self.tmdb_id) \
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&language=en-US'
-            log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
+            log.debug('url: %s', url.replace(settings.tmdb_api_key, '[masked]'))
             response = retrieve_web_page(url, 'tmdb media details')
             details_data = json.loads(response.text)
             response.close()
@@ -422,7 +445,7 @@ class Record:
                 + '?api_key=' + settings.tmdb_api_key \
                 + '&query=' + quote(self.title.encode('utf-8')) \
                 + '&language=en-US&page=1&include_adult=false'
-            log.debug('url: %s', url.replace(settings.tmdb_api_key, "[masked]"))
+            log.debug('url: %s', url.replace(settings.tmdb_api_key, '[masked]'))
             response = retrieve_web_page(url, 'tmdb movie search page')
             search_data = json.loads(response.text)
             response.close()
@@ -501,8 +524,8 @@ class Record:
     def save_record(self, save_path):
         if not os.path.isdir(save_path):
             os.mkdir(os.path.join(save_path))
-        with open(os.path.join(save_path, os.path.split(args.directory)[1] + ".json"),
-                'w', encoding="utf-8") as save_file:
+        with open(os.path.join(save_path, os.path.split(args.directory)[1] + '.json'),
+                'w', encoding='utf-8') as save_file:
             json.dump(self.__dict__, save_file, indent = 4)
 
 
@@ -552,7 +575,7 @@ def download_extra(record):
 def handle_directory():
     log.info('working on record: %s', args.directory)
 
-    record_path = os.path.join(settings.record_folder, os.path.split(args.directory)[1] + ".json")
+    record_path = os.path.join(settings.record_folder, os.path.split(args.directory)[1] + '.json')
     if not args.force and os.path.exists(record_path):
         record = Record.load_record(record_path)
     else:
@@ -585,7 +608,7 @@ if args.directory and os.path.split(args.directory)[1] == '':
 
 # Setup logger
 
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 log = logging.getLogger('med')
 
 # Retrieve Required Variables
