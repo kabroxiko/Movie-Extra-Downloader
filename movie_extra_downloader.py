@@ -368,7 +368,7 @@ class Record:
 
     def __init__(self):
 
-        self.tmdb_id = None
+        self.tmdb_id = args.tmdbid
         self.media_type = args.mediatype
         self.title = None
         if self.media_type == 'movie':
@@ -493,7 +493,8 @@ class Record:
                 if movie_data is None:
                     movie_data = search_data['results'][0]
 
-            self.tmdb_id = movie_data['id']
+            if self.tmdb_id == None:
+                self.tmdb_id = movie_data['id']
             if self.media_type == 'movie':
                 self.title = get_clean_string(movie_data['title'])
                 self.original_title = get_clean_string(movie_data['original_title'])
