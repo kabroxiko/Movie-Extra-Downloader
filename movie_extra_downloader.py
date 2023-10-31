@@ -299,11 +299,13 @@ class ExtraFinder:
 
         def clean_subtitle():
             # Ruta del archivo MKV
-            subtitle_file = 'sub.srt'
+            subtitle_file = source_path + '.srt'
 
             # Extraer los subtítulos del archivo MKV
-            subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error',
-                            '-y', '-i', source_path, '-c:s', 'srt', subtitle_file])
+            result = subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error',
+                            '-y', '-i', source_path, '-c:s', 'srt', subtitle_file], capture_output=True)
+            if result.stderr:
+                return
 
             # Limpiar los comentarios del archivo de subtítulos
             sub = Subtitle(subtitle_file)
@@ -320,6 +322,7 @@ class ExtraFinder:
                             '-y', '-i', source_path, '-i', subtitle_file,
                             '-map', '0', '-map', '-0:s', '-map', '1', '-c', 'copy',
                             '-metadata:s:s:0', 'language=spa', target_path])
+            os.remove(subtitle_file)
 
 
         def record_file():
