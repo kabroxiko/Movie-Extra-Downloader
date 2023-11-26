@@ -605,6 +605,7 @@ parser.add_argument('-d', '--directory', help='directory to search extras for')
 parser.add_argument('-t', '--tmdbid', help='tmdb id to search extras for')
 parser.add_argument('-m', '--mediatype', help='media type to search extras for')
 parser.add_argument('-f', '--force', action='store_true', help='force scan the directories')
+parser.add_argument('-v', '--verbose', help='verbose mode', action="store_true")
 args = parser.parse_args()
 
 if args.directory and os.path.split(args.directory)[1] == '':
@@ -612,7 +613,7 @@ if args.directory and os.path.split(args.directory)[1] == '':
 
 # Setup logger
 
-logging.basicConfig(level=logging.INFO, format='%(message)s')
+logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format='%(message)s')
 log = logging.getLogger('med')
 
 # Retrieve Required Variables
